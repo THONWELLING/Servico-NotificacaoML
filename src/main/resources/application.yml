@@ -1,0 +1,26 @@
+server:
+  port: 80
+spring:
+  ambarcloud : ${AMBARCLOUD}
+  ambarcloud2: ${AMBARCLOUD2}
+  usuariosql : ${USUARIO_SQLSERVER}
+  senhasql   : ${SENHA_SQLSERVER}
+  datasource:
+    #  CONEXÃO COM O BANCO DE DADOS MYSQL
+    url              : jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username         : ${DB_USERNAME}
+    password         : ${DB_PASSWORD}
+jpa:
+  show-sql                       : true
+  database-platform              : org.hibernate.dialect.MySQL8Dialect
+  dialect                        : org.hibernate.dialect.MySQL8Dialect
+  defer-datasource-initialization: true
+  properties:
+    hibernate:
+      show-sql  : true
+      format_sql: true
+      ddl-auto  : update
+    mvc:
+      pathmatch:
+        matching-strategy: ant_path_matcher
