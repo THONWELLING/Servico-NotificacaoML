@@ -2,12 +2,13 @@ package com.ambarx.notificacoesML;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.sql.SQLException;
 
 @EnableScheduling
-//@EnableJpaRepositories(basePackages = "com/ambarx/notificacoesML/repositories")
+@EnableJpaRepositories(basePackages = "com/ambarx/notificacoesML/repositories")
 @SpringBootApplication
 public class StartUp {
 
