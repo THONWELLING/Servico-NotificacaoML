@@ -7,6 +7,7 @@ import com.ambarx.notificacoesML.dto.infodobanco.DadosMlSkuFullDTO;
 import com.ambarx.notificacoesML.dto.item.AtributoDTO;
 import com.ambarx.notificacoesML.dto.item.InfoItemsMLDTO;
 import com.ambarx.notificacoesML.dto.item.ItemDTO;
+import com.ambarx.notificacoesML.dto.item.VariacaoDTO;
 import com.ambarx.notificacoesML.dto.notificacao.NotificacaoMLDTO;
 import com.ambarx.notificacoesML.httpclients.MercadoLivreHttpClient;
 import com.ambarx.notificacoesML.mapper.ModelMapperMapping;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +34,8 @@ import java.util.logging.Logger;
 @Service
 public class NotificacaoServiceImpl implements NotificacaoService {
   private final Logger logger = Logger.getLogger(NotificacaoServiceImpl.class.getName());
+
+  //region Injeção De Dependências Necessárias.
   @Autowired
   private SellerMercadoLivreRepository sellerRepository;
   @Autowired
@@ -51,6 +55,8 @@ public class NotificacaoServiceImpl implements NotificacaoService {
     MercadoLivreHttpClient mercadoLivreHttpClient = new MercadoLivreHttpClient(restTemplate);
     this.requisicoesMercadoLivre = requisicoesMercadoLivre;
   }
+
+  //endregion
   @Scheduled(fixedRate = 60000)
   public void executarBuscaPeriodica() throws Exception {
     logger.info("Executando Busca de Notificações de Forma Automática...");
@@ -61,9 +67,9 @@ public class NotificacaoServiceImpl implements NotificacaoService {
   public void buscarTodasNotificacoes(NotificacaoMercadoLivreRepository notificacaoMercadoLivreRepository) throws Exception {
 
     logger.info("Buscando Todas As Notificações Do Mercado Livre!!!");
-    List<NotificacaoML> vNotificacoes = notificacaoMercadoLivreRepository.findAll(); //Busca Todas Notificações
+    List<NotificacaoML> vTodasNotificacoes = notificacaoMercadoLivreRepository.findAll();
 
-    List<NotificacaoMLDTO> vNotificacoesML = ModelMapperMapping.parseListObjects(vNotificacoes, NotificacaoMLDTO.class);
+    List<NotificacaoMLDTO> vNotificacoesML = ModelMapperMapping.parseListObjects(vTodasNotificacoes, NotificacaoMLDTO.class);
     if (vNotificacoesML != null) {
 
       logger.info("Lista de Notificações Existe!!. Mapeando Lista De Notificações Por User_Id!!");
@@ -98,33 +104,35 @@ public class NotificacaoServiceImpl implements NotificacaoService {
 
                 // Verificando o Parâmetro `IGNORAR_GETSKU` Do Banco Do Cliente
                 if (operacoesNoBanco.ignorarGetSku(conexaoSQLServer)) {
-
                   logger.info("IgnorarGetSKU Definido Como SIM. Apagar Notificações.");
                   notificacaoMercadoLivreRepository.deleteAllById(utils.apagarNotificacoes(vNotificacoesDoUsuario));
                   logger.info("SUCESSO: Notificações Apagadas!!");
 
                   //Verificando Origem Ativa No Banco Do Seller
-                } else if (!operacoesNoBanco.verificaOrigemAtiva(conexaoSQLServer, userId)) {
-
+                } else if (!operacoesNoBanco.buscaParamPedido(conexaoSQLServer, userId)) {
                   logger.info("Parâmetro Pedido é  N  Apagar Notificações.");
                   notificacaoMercadoLivreRepository.deleteAllById(utils.apagarNotificacoes(vNotificacoesDoUsuario));
                   logger.info("Notificações Apagadas Com Sucesso!!");
 
                 } else {
-                  //Obtem Dados Da ECOM_METODOS
+
+                  //region Obtem Dados Da ECOM_METODOS.
                   DadosEcomMetodosDTO vDadosEcomMetodosDTO = operacoesNoBanco.buscarTokenTemp(conexaoSQLServer, userId);
                   String              vTokenTempSeller     = vDadosEcomMetodosDTO.getTokenTemp();
                   int                 vOrigem              = vDadosEcomMetodosDTO.getOrigem();
+                  //endregion
 
                   for (NotificacaoMLDTO objNotificacao : vNotificacoesDoUsuario) {
                     String vResourceNotificacao = objNotificacao.getResource();
                     String vSkuNotificacao      = utils.extrairSkuMLDasNotificacoes(vResourceNotificacao);
                     if (vSkuNotificacao != null) {
-                      //Fazendo a Requisição de Itens no Mercado Livre.
+                      //region Fazendo a Requisição de Itens no Mercado Livre.
                       ItemDTO objRespostaAPI = requisicoesMercadoLivre.fazerRequisicaoGetItem(vSkuNotificacao, vTokenTempSeller);
 
                       if (objRespostaAPI != null) {
                         logger.info("SUCESSO: JSON GET Item Do Mercado Livre Capturado!!");
+
+                        //region Pegando Dados Do JSON Response
                         String vTituloGET         = objRespostaAPI.getTitle();
                         String vCategoriaGET      = objRespostaAPI.getCategoryId();
                         int    vQtdeOriginalGET   = objRespostaAPI.getInitialQuantity();
@@ -142,25 +150,29 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                         String vRelacionadoGET    = objRespostaAPI.getItemRelations() != null && !objRespostaAPI.getItemRelations().isEmpty() ? "S" : "N";
                         String vSupermercado      = objRespostaAPI.getTags().contains("supermarket_eligible") ? "S" : "N";
 
-                        //Pegando o Seller_sku do Array de Attributos
+                        //region Pegando o Seller_sku do Array de Attributos
                         for (AtributoDTO atributo : objRespostaAPI.getAttributes()) {
                           if ("SELLER_SKU".equalsIgnoreCase(atributo.getId())) {
                             vSellerSkuGET = atributo.getValueName();
                             break;
                           }
                         }
-                        //Pegando Supermercado no array de Tags
+                        //endregion
 
-                        //Fazendo o GET da Comissão No Mercado Livre
+                        //endregion
+
+                        //region Fazendo o GET da Comissão No Mercado Livre
                         double vValorComissao = requisicoesMercadoLivre.fazerRequisicaoGetComissaoML(vTipoDeAnuncioGET, vPrecoNoGET, vCategoriaGET, vTokenTempSeller);
                         logger.info("Valor da Comissão No ML " + vValorComissao + "%");
+                        //endregion
 
-                        //Frete Fazendo o GET do Valor Do Frete No Mercado Livre
+                        //region Frete Fazendo o GET do Valor Do Frete No Mercado Livre
                         double vValorFrete = requisicoesMercadoLivre.fazerRequisicaoGetFrete(userId, vSkuNotificacao, vTokenTempSeller);
                         logger.info("Valor do Frete No ML R$ " + vValorFrete);
+                        //endregion
 
-                        //Buscando Informações Na Tabela ECOM_SKU do Seller
-                        InfoItemsMLDTO objItensEcomSku = operacoesNoBanco.buscarInformacoesNaECOM_SKU(conexaoSQLServer, vSkuNotificacao);
+                        //region Buscando Informações Na Tabela ECOM_SKU do Seller
+                        InfoItemsMLDTO objItensEcomSku = operacoesNoBanco.buscaProdutoNaECOM_SKU(conexaoSQLServer, vSkuNotificacao);
 
                         if (objItensEcomSku == null) {
                           /**
@@ -178,25 +190,29 @@ public class NotificacaoServiceImpl implements NotificacaoService {
 
                         logger.info("Está Ativo No Banco De Dados ? " + vEstaAtivoNoDB);
                         logger.info("É    Full  No Banco De Dados ? " + vEFulNoDB);
+                        //endregion
 
                         //VERIFICANDO FULL NO DB E NO GET
                         if (vEFullNoGET.equalsIgnoreCase("S") && vEFulNoDB.equalsIgnoreCase("S") ) {
+
                           //Verificando se existe o campo variations e pegando a quantidade de registros!
                           int numeroDeVariacoes = objRespostaAPI.getVariations() != null && !objRespostaAPI.getVariations().isEmpty() ? objRespostaAPI.getVariations().size() : 0;
-
                           logger.info("O Produto Contém " + numeroDeVariacoes + " Variações!");
+
                           if (numeroDeVariacoes >= 0) {
+
+                            //region Sem Variação.
                             String vVariationId = "";
                             try {
-                              DadosMlSkuFullDTO vExiste = operacoesNoBanco.buscarNaTabelaMlSkuFull(conexaoSQLServer, vSkuNotificacao);
+                              //Verifica Se o SKU Existe Na ML_SKU_FULL
+                              DadosMlSkuFullDTO vExiste = operacoesNoBanco.existeNaTabelaMlSkuFull(conexaoSQLServer, vSkuNotificacao);
+
                               if (vExiste.getVExiste() <= 0) {
                                 logger.warning("O SKU " + vSkuNotificacao + " Não Existe Na Tabela ML_SKU_FULL. Deve Fazer Insert Na Tabela.");
-                                operacoesNoBanco.inserirInformacoesNaTabelaMlSkuFull(conexaoSQLServer, vOrigem, vCodID, vSkuNotificacao, "0", vInventoryIdGET, vTituloGET, vEstaAtivoNoGET, vPrecoNoGET, vUrlDaImagemGET, vCatalogoGET, vRelacionadoGET);
-
+                                operacoesNoBanco.inserirProdutoNaTabelaMlSkuFull(conexaoSQLServer, vOrigem, vCodID, vSkuNotificacao, "0", vInventoryIdGET, vTituloGET, vEstaAtivoNoGET, vPrecoNoGET, vUrlDaImagemGET, vCatalogoGET, vRelacionadoGET);
                               } else {
-                                //UPDATE INVENTORY_ID, STATUS, PRECO, CATALOGO, RELACIONADO
                                 logger.info("Atualizando o Sku atual na tabela ml_sku_full ");
-                                operacoesNoBanco.atualizaInformacoesNaTabelaMlSkuFull(conexaoSQLServer, vInventoryIdGET, vEstaAtivoNoGET, vPrecoNoGET, vUrlDaImagemGET, vCatalogoGET, vRelacionadoGET);
+                                operacoesNoBanco.atualizaProdutoNaTabelaMlSkuFull(conexaoSQLServer, vInventoryIdGET, vEstaAtivoNoGET, vPrecoNoGET, vUrlDaImagemGET, vCatalogoGET, vRelacionadoGET);
                               }
                             } catch (Exception excecao) {
                               excecao.printStackTrace();
@@ -205,6 +221,22 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                               /**ML_Inventario_Full(pOrig, vInventoryIdGET) ;*/
 
                             }
+                            // endregion
+
+                          } else{
+
+                            //region Com Variação.
+                            ArrayList<VariacaoDTO> arrVariacoes = objRespostaAPI.getVariations();
+
+                            for (VariacaoDTO vVariacao : arrVariacoes) {
+                              long   vIdVariacao    = vVariacao.getId();
+                              double vVariacaoPreco = vVariacao.getPrice();
+                              int    vQtdeVariacao  = vVariacao.getAvailableQuantity();
+                            }
+
+
+                            //endregion
+
                           }
 
 
@@ -215,29 +247,22 @@ public class NotificacaoServiceImpl implements NotificacaoService {
 
                           logger.info("O SKU É Fullfilment No Mercado Livre, Mas, Não é Fullfilment No Banco. Atualizar o Fulfillment No Banco Para S!!");
 
-                          DadosMlSkuFullDTO vExisteNaMlSkuFull = operacoesNoBanco.buscarNaTabelaMlSkuFull(conexaoSQLServer, vSkuNotificacao);
+                          DadosMlSkuFullDTO vExisteNaMlSkuFull = operacoesNoBanco.existeNaTabelaMlSkuFull(conexaoSQLServer, vSkuNotificacao);
                           if (vExisteNaMlSkuFull.getVExiste() <= 0) {
 
                             logger.warning("O SKU " + vSkuNotificacao + " Não Existe Na Tabela ML_SKU_FULL. Deve Fazer Insert Na Tabela.");
-
-                            /**
-                             * INSERIR DATAHR, ORIGEM_ID, CODID, SKU, VARIACAO_ID, INVENTORY_ID, TITULO, ATIVO, VALOR, URL, CATALOGO, RELACIONADO,
-                             * na tabela ML_SKU_FULL
-                             * @author ThonWelling
-                             * */
-                            operacoesNoBanco.inserirInformacoesNaTabelaMlSkuFull(conexaoSQLServer, vOrigem, vCodID, vSkuNotificacao, "0", vInventoryIdGET, vTituloGET, vEstaAtivoNoGET, vPrecoNoGET, vUrlDaImagemGET, vCatalogoGET, vRelacionadoGET);
+                            operacoesNoBanco.inserirProdutoNaTabelaMlSkuFull(conexaoSQLServer, vOrigem, vCodID, vSkuNotificacao, "0", vInventoryIdGET, vTituloGET, vEstaAtivoNoGET, vPrecoNoGET, vUrlDaImagemGET, vCatalogoGET, vRelacionadoGET);
 
                           } else {
-                            //UPDATE INVENTORY_ID, STATUS, PRECO, CATALOGO, RELACIONADO
                             logger.info("Atualizando o Sku atual na tabela ml_sku_full ");
-                            operacoesNoBanco.atualizaInformacoesNaTabelaMlSkuFull(conexaoSQLServer, vInventoryIdGET, vEstaAtivoNoGET, vPrecoNoGET, vUrlDaImagemGET, vCatalogoGET, vRelacionadoGET);
+                            operacoesNoBanco.atualizaProdutoNaTabelaMlSkuFull(conexaoSQLServer, vInventoryIdGET, vEstaAtivoNoGET, vPrecoNoGET, vUrlDaImagemGET, vCatalogoGET, vRelacionadoGET);
                           }
 
                         } else if (!vEFullNoGET.equalsIgnoreCase("S") && vEFulNoDB.equalsIgnoreCase("S")) {
 
                           logger.info("Não é Fullfilment No Mercado Livre, Mas, é Fullfilment No DB. Atualizar o Fulffilment No Banco Para N e Inserir em Outra Tabela!!");
                           //Inserindo o Id Do Material na NaESTOQUE_MKTP
-                          operacoesNoBanco.inserirInformacoesNaESTOQUE_MKTP(conexaoSQLServer, vCodID);
+                          operacoesNoBanco.inserirSkuIDNaESTOQUE_MKTP(conexaoSQLServer, vCodID);
                         }
 
 
@@ -248,13 +273,14 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                     } else {
                       logger.warning("MLB Não Pôde Ser Extraido Para a Notificação " + objNotificacao.getId());
                     }
-                 }
+                    //endregion
+
+                  }
 
 
 
 
 
-                  logger.info(" IGNORAR_GETSKU Não Definido Como 'S'. Não Fazendo Nada.");
                 }
               }
             }

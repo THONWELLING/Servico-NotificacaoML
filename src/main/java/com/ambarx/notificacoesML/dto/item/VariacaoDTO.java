@@ -1,6 +1,5 @@
 package com.ambarx.notificacoesML.dto.item;
 
-import com.ambarx.notificacoesML.dto.item.AtributoDTO;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.AllArgsConstructor;
