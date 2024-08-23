@@ -196,10 +196,9 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                         if (vEFullNoGET.equalsIgnoreCase("S") && vEFulNoDB.equalsIgnoreCase("S") ) {
 
                           //Verificando se existe o campo variations e pegando a quantidade de registros!
-                          int numeroDeVariacoes = objRespostaAPI.getVariations() != null && !objRespostaAPI.getVariations().isEmpty() ? objRespostaAPI.getVariations().size() : 0;
-                          logger.info("O Produto Contém " + numeroDeVariacoes + " Variações!");
+                          ArrayList<VariacaoDTO> arrVariacoes = objRespostaAPI.getVariations();
 
-                          if (numeroDeVariacoes >= 0) {
+                          if (arrVariacoes.size() == 0) {
 
                             //region Sem Variação.
                             String vVariationId = "";
@@ -226,13 +225,43 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                           } else{
 
                             //region Com Variação.
-                            ArrayList<VariacaoDTO> arrVariacoes = objRespostaAPI.getVariations();
-
                             for (VariacaoDTO vVariacao : arrVariacoes) {
                               long   vIdVariacao    = vVariacao.getId();
                               double vVariacaoPreco = vVariacao.getPrice();
                               int    vQtdeVariacao  = vVariacao.getAvailableQuantity();
+
+                              StringBuilder vVarBuilder = new StringBuilder();
+                              for (AtributoDTO atributoVariacao : vVariacao.getAttributes()) {
+                                if ("attribute_combinations".equalsIgnoreCase(atributoVariacao.getId())) {
+                                  vVarBuilder.append(atributoVariacao.getValueName()).append(", ");
+                                  break;
+                                }
+                              }
+                              if (vVarBuilder.length() > 0) {
+                                vVarBuilder.setLength(vVarBuilder.length() - 2);
+                              }
+                              String vVar = vVarBuilder.toString();
+
+                              try {
+                                //Verifica Se o SKU Existe Na ML_SKU_FULL
+                                DadosMlSkuFullDTO vExiste = operacoesNoBanco.existeNaTabelaMlSkuFull(conexaoSQLServer, vSkuNotificacao);
+
+                                if (vExiste.getVExiste() <= 0) {
+                                  logger.warning("O SKU " + vSkuNotificacao + " Não Existe Na Tabela ML_SKU_FULL. Deve Fazer Insert Na Tabela.");
+                                  operacoesNoBanco.inserirProdutoNaTabelaMlSkuFull(conexaoSQLServer, vOrigem, vCodID, vSkuNotificacao, "0", vInventoryIdGET, vTituloGET, vEstaAtivoNoGET, vPrecoNoGET, vUrlDaImagemGET, vCatalogoGET, vRelacionadoGET);
+                                } else {
+                                  logger.info("Atualizando o Sku atual na tabela ml_sku_full ");
+                                  operacoesNoBanco.atualizaProdutoNaTabelaMlSkuFull(conexaoSQLServer, vInventoryIdGET, vEstaAtivoNoGET, vPrecoNoGET, vUrlDaImagemGET, vCatalogoGET, vRelacionadoGET);
+                                }
+                              } catch (Exception excecao) {
+                                excecao.printStackTrace();
+                              }
+                              if (vInventoryIdGET.length() > 2) {
+                                /**ML_Inventario_Full(pOrig, vInventoryIdGET) ;*/
+
+                              }
                             }
+
 
 
                             //endregion
