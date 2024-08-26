@@ -109,7 +109,7 @@ public class OperacoesNoBanco {
   }
   //endregion
 
-  //region Função Para Buscar Produto Na Tabela ML_SKU_FULL e Setar vExiste.
+  //region Função Para Buscar Produto SIMPLES Na Tabela ML_SKU_FULL e Setar vExiste.
   public DadosMlSkuFullDTO existeNaTabelaMlSkuFull(Connection pConexao, String pSkuML) throws SQLException {
     logger.info("Buscando SKU Na Tabela ml_sku_full");
     String Qry_InfoDBMlSkuFull = "SELECT COUNT(*) FROM ML_SKU_FULL WHERE SKU = ?";
@@ -133,34 +133,59 @@ public class OperacoesNoBanco {
   }
   //endregion
 
-  //region Função Para Inserir Informacões Na Tabela ESTOQUE_MKTP.
-  public void inserirSkuIDNaESTOQUE_MKTP(Connection pConexao, int pCodID) throws SQLException {
+  //region Função Para Buscar Produto VARIAÇÃO Na Tabela ML_SKU_FULL e Setar vExiste.
+  public DadosMlSkuFullDTO existeNaTabelaMlSkuFull(Connection pConexao, String pSkuML, Long pVariacaoId) throws SQLException {
+    logger.info("Buscando SKU Na Tabela ml_sku_full");
+    String Qry_InfoDBMlSkuFull = "SELECT COUNT(*) FROM ML_SKU_FULL WHERE SKU = ? AND VARIACAO_ID = ?";
+    try (PreparedStatement statement = pConexao.prepareStatement(Qry_InfoDBMlSkuFull)) {
+      statement.setString(1, pSkuML);
+      statement.setLong(2  , pVariacaoId);
+      try(ResultSet resultSet = statement.executeQuery()) {
+        if (resultSet.next()) {
+          int totalResult   = resultSet.getInt(1);
+          logger.info("SKU Encontrado Na Tabela ML_SKU_FULL");
 
-    logger.info("Inserindo ID do SKU Na Tabela ESTOQUE_MKTP");
-
-    String Qry_InsertESTOQUE_MKTP = "INSERT INTO ESTOQUE_MKTP (CODID)" +
-            "VALUES (:CODID)";
-
-    try (PreparedStatement statement = pConexao.prepareStatement(Qry_InsertESTOQUE_MKTP)) {
-      statement.setInt(    3,  pCodID);
-      statement.executeUpdate();
-
-      logger.info("SUCESSO: IDs Inseridos Na Tabela ESTOQUE_MKTP!!");
-
+          DadosMlSkuFullDTO dadosMlSkuFullDTO = new DadosMlSkuFullDTO();
+          dadosMlSkuFullDTO.setVExiste(totalResult);
+          return dadosMlSkuFullDTO;
+        }
+        return null;
+      }
     } catch (SQLException excecao) {
       excecao.printStackTrace();
     }
+    return null;
   }
   //endregion
 
+  //region Função Para Inserir Informacões Na Tabela ESTOQUE_MKTP.
+    public void inserirSkuIDNaESTOQUE_MKTP(Connection pConexao, int pCodID) throws SQLException {
+
+      logger.info("Inserindo ID do SKU Na Tabela ESTOQUE_MKTP");
+
+      String Qry_InsertESTOQUE_MKTP = "INSERT INTO ESTOQUE_MKTP (CODID)" +
+              "VALUES (:CODID)";
+
+      try (PreparedStatement statement = pConexao.prepareStatement(Qry_InsertESTOQUE_MKTP)) {
+        statement.setInt(    3,  pCodID);
+        statement.executeUpdate();
+
+        logger.info("SUCESSO: IDs Inseridos Na Tabela ESTOQUE_MKTP!!");
+
+      } catch (SQLException excecao) {
+        excecao.printStackTrace();
+      }
+    }
+    //endregion
+
   //region Função Para Inserir Produto Na Tabela ML_SKU_FULL.
-  public void inserirProdutoNaTabelaMlSkuFull(Connection pConexao, int pOrigem, int pCodID, String pSkuML, String pVariationId, String pInventoryId, String pTitulo, String pStatus,
+  public void inserirProdutoNaTabelaMlSkuFull(Connection pConexao, int pOrigem, int pCodID, String pSkuML, String pVariationId, String pVariacao, String pInventoryId, String pTitulo, String pStatus,
                                               double pPreco, String pImagemUrl, String pCatalogo, String pRelacionado) throws SQLException {
 
     logger.info("Inserindo Dados do SKU Na Tabela ML_SKU_FULL");
 
-    String Qry_InsertMlSkuFull = "INSERT INTO ML_SKU_FULL (DATAHR, ORIGEM_ID, CODID, SKU, VARIACAO_ID, INVENTORY_ID, TITULO, ATIVO, VALOR, URL, CATALOGO, RELACIONADO )" +
-                                 "VALUES (:DT, :ORIG, :CODID, :SKU, :VAR, :INV, :TIT, :ST, :VLR, :URL, :CATAG, :RELAT)";
+    String Qry_InsertMlSkuFull = "INSERT INTO ML_SKU_FULL (DATAHR, ORIGEM_ID, CODID, SKU, VARIACAO_ID, VARIACAO, INVENTORY_ID, TITULO, ATIVO, VALOR, URL, CATALOGO, RELACIONADO )" +
+                                 "VALUES (:DT, :ORIG, :CODID, :SKU, :VARID, :VAR, :INV, :TIT, :ST, :VLR, :URL, :CATAG, :RELAT)";
 
     Date vDataHr = new Date(System.currentTimeMillis());
     try (PreparedStatement statement = pConexao.prepareStatement(Qry_InsertMlSkuFull)) {
