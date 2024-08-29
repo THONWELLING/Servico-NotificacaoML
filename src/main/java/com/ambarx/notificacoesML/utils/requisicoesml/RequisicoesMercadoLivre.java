@@ -38,7 +38,7 @@ public static ItemDTO fazerRequisicaoGetItem(String skuML, String tokenSeller) t
   logger.log(Level.INFO, "Fazendo GET Do SKU No Mercado Livre!!!");
   ItemDTO respostaAPI = ModelMapperMapping.parseObject(mercadoLivreHttpClient.fazerRequisicao(urlGetItems, tokenSeller, ItemDTO.class), ItemDTO.class);
 
-  utils.gravarJson(respostaAPI, "C:/Ambar/Temp/RetornoGetItemMl.txt");
+  utils.gravaJSON(respostaAPI, "C:/Ambar/Temp/RetornoGetItemMl.txt");
   return respostaAPI;
 }
 //endregion
@@ -51,7 +51,7 @@ public static double fazerRequisicaoGetComissaoML(String tipoDeAnuncio, double p
   String        urlGetComissao = "https://api.mercadolibre.com/sites/MLB/listing_prices/" + tipoDeAnuncio + "?price=" + formatoValor.format(preco) + "&category_id=" + categoria;
   logger.log(Level.INFO, "Fazendo GET Da Comissão No Mercado Livre!!!");
   ComissaoDTO  respostaAPIComissao = ModelMapperMapping.parseObject(mercadoLivreHttpClient.fazerRequisicao(urlGetComissao, tokenSeller, ComissaoDTO.class), ComissaoDTO.class);
-  utils.gravarJson(respostaAPIComissao, "C:/Ambar/Temp/RetornoGetComissaoMl.txt");
+  utils.gravaJSON(respostaAPIComissao, "C:/Ambar/Temp/RetornoGetComissaoMl.txt");
 
   // Extrair valor da comissão
   return respostaAPIComissao.getSaleFeeDetails().getPercentageFee();
@@ -65,7 +65,7 @@ public static double fazerRequisicaoGetFrete(String userId, String skuML, String
 
   try {
     FreteDTO respostaAPIFrete = ModelMapperMapping.parseObject(mercadoLivreHttpClient.fazerRequisicao(urlFrete, tokenSeller, FreteDTO.class), FreteDTO.class);
-    utils.gravarJson(respostaAPIFrete, "C:/Ambar/Temp/RetornoGetFreteMl.txt");
+    utils.gravaJSON(respostaAPIFrete, "C:/Ambar/Temp/RetornoGetFreteMl.txt");
     return respostaAPIFrete != null ? respostaAPIFrete.getCoverage().getAllCountry().getListCost() : 0.00;
   } catch (Exception excecao) {
     excecao.printStackTrace();

@@ -13,73 +13,96 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 @Service
 public class FuncoesUtils {
 private final Logger logger = Logger.getLogger(FuncoesUtils.class.getName());
 
-
 //region Função Para Agrupar As Notificações e Filtrar Para Evitar Requisições Desnecessárias
-public Map<String, List<NotificacaoMLDTO>> agruparEFiltrarNotificacoes(List<NotificacaoMLDTO> notificacoesML) {
   /**
-   * Esse Função Foi Criada Co o Intuito De Eliminar Requisições Desnecessárias Mediante a Eliminação de Notificações Exatamente Iguais Eme um Período de 2 Minutos.
-   * Ou Seja, Se Existirem 10 Notificações Exatamente Iguais de Um Mesmo Seller e o Período de Recebimento da Mesma For Menor que 2 Min. Entre elas, Serão Eliminadas
-   * as Notificações Repetidas. Isso vai Resultar Na Diminuição De Requisições Feitas Para a API Externa Diminuindo Assim o Tráfego de Dados.
-
+   * A Função Abaixo Foi Criada Com O Intuito De Eliminar Requisições Desnecessárias Mediante A Eliminação De Notificações Exatamente Iguais Dentro De Um Período De 2 Minutos.
+   * Ou Seja, Se Existirem 10 Notificações Exatamente Iguais De Um Mesmo Seller(Userid) E O Período De Recebimento Da Mesma(Received) For Menor Que 2 Min. Entre Elas, Serão Eliminadas
+   * As Notificações Repetidas. Isso Vai Resultar Na Diminuição De Requisições Feitas Para A Api Externa Diminuindo Assim O Tráfego De Dados E A Intermitência No Processamento.
+   * Como A Função Funciona
+   * Agrupamento Por Userid:
+   * <p>
+   * A Função Começa Agrupando Todas As Notificações Pelo Userid Usando Collectors.groupingby(Notificacaomldto::getuserid). Isso Cria Um Map<String, List<NotificacaoMLDTO>> Onde A Chave É O Userid E O Valor É Uma Lista De Notificações Associadas A Esse Userid.
+   * Iteração Sobre Os Grupos De Userid:
+   * <p>
+   * Depois De Agrupar As Notificações, A Função Itera Sobre Cada Entrada Desse Mapa (Entryset().stream()), O Que Significa Que Ela Processa Cada Grupo De Notificações De Forma Independente.
+   * Filtragem Dentro De Cada Grupo De Userid:
+   * <p>
+   * Para Cada Userid E Sua Lista De Notificações (Entry.getvalue()), A Função:
+   * Ordena As Notificações Pela Data De Recebimento (Received).
+   * Cria Uma Lista Notificacoesfiltradas Para Armazenar As Notificações Após A Filtragem.
+   * Utiliza Um Hashmap Chamado Ultimasnotificacoes Para Rastrear A Última Data De Recebimento De Cada Resource Dentro Desse Grupo.
+   * Filtra As Notificações Dentro Da Lista Específica De Um Userid Para Remover Notificações Repetidas Com Base No Intervalo De 2 Minutos.
+   * Resumo
+   * A Função Proposta Faz Exatamente O Que Você Descreveu:
+   * <p>
+   * Agrupa Notificações Por Userid.
+   * Filtra Notificações Repetidas Dentro De Cada Grupo De Userid Com Base No Resource E No Intervalo De Tempo De 2 Minutos.
+   * Portanto, A Função Atende Aos Requisitos De Agrupar Por Userid E Filtrar Notificações Repetidas Apenas Dentro Das Notificações Pertencentes A Cada Userid Individualmente.
+   * <p>
+   * @Param: pNotificacoesml -> Lista Contendo Todas As Notificações Do Mercado Livre.
+   * @Return: A Função Agruparefiltrarnotificacoes Retorna Um Map<String, List<NotificacaoMLDTO>>, Onde:
+   * <p>
+   * Chave (String): Representa O Userid De Cada Usuário.
+   * <p>
+   * Valor (List<NotificacaoMLDTO>): É Uma Lista De Objetos Notificacaomldto Que Foram Filtrados Para Esse Userid Específico. Cada Lista Contém Apenas Notificações Únicas, Ou Seja, Notificações Que Não São Repetidas Dentro De Um Intervalo De 2 Minutos Para O Mesmo Resource.
    * @Author: Thonwelling*/
+
+  public Map<String, List<NotificacaoMLDTO>> agruparEFiltrarNotificacoes(List<NotificacaoMLDTO> pNotificacoesML) {
 
   //Converte strings(ISO 8601) da tag received das em objetos LocalDateTime. Isso facilita a comparação de datas que faremos para filtrar as notificações.
   DateTimeFormatter formataData = DateTimeFormatter.ISO_DATE_TIME;
 
   // Agrupando Notificações Por User_Id
-  return notificacoesML.stream()// Inicia um fluxo (stream) das notificações.
-    .collect(Collectors.groupingBy(NotificacaoMLDTO::getUserId))//Agrupa as notificações em um Map onde a chave é o user_id e o valor é uma lista de notificações(List<NotificacaoMLDTO>) desse user_id.
-    .entrySet().stream()//Converte o conjunto de entradas do mapa (Map) da etapa anterior em um fluxo(stream) para poder iterar sobre cada grupo de notificações(cada par user_id -> lista de notificações).
-    .collect(Collectors.toMap(
-      // Esse Coletor cria um novo Map onde:
-      Map.Entry::getKey, // O (user_id) é a chave
-      entry -> {
-        List<NotificacaoMLDTO> notificacoesDoUsuario = entry.getValue(); //Obtém a lista de notificações associadas ao user_id atual.
+  return pNotificacoesML
+  .stream()// Inicia um fluxo (stream) das notificações.
+  .collect(Collectors.groupingBy(NotificacaoMLDTO::getUserId))//Agrupa as notificações em um Map onde a chave é o user_id e o valor é uma lista de notificações(List<NotificacaoMLDTO>) desse user_id.
+  .entrySet().stream()//Converte o conjunto de entradas do mapa (Map) da etapa anterior em um fluxo(stream) para poder iterar sobre cada grupo de notificações(cada par user_id -> lista de notificações).
+  .collect(Collectors.toMap(
+    // Esse Coletor cria um novo Map onde:
+    Map.Entry::getKey, // O (user_id) é a chave
+    entry -> {
+      List<NotificacaoMLDTO> vNotificacoesDoUsuario = entry.getValue(); //Obtém a lista de notificações associadas ao user_id atual.
 
-        //Ordenar por data de recebimento
-        notificacoesDoUsuario.sort(Comparator.comparing(NotificacaoMLDTO::getReceived));//Ordena as notificações dentro desse grupo em ordem crescente, com base na data de recebimento (received).
+      //Ordenar por data de recebimento
+      vNotificacoesDoUsuario.sort(Comparator.comparing(NotificacaoMLDTO::getReceived));//Ordena as notificações dentro desse grupo em ordem crescente, com base na data de recebimento (received).
 
-        //Filtrar Notificações Repetidas
-        return notificacoesDoUsuario.stream()
-          /**Filtra a lista de notificações para remover as repetidas.*/
-          .filter(notificacao -> {
-            LocalDateTime dataRecebida = LocalDateTime.parse(notificacao.getReceived(), formataData);//Converte a data de recebimento da notificação atual em um objeto LocalDateTime.
-            return notificacoesDoUsuario.stream()
-              .noneMatch(other -> {
-                if (notificacao == other) return false;
-                LocalDateTime otherDataRecebida = LocalDateTime.parse(other.getReceived(), formataData);
-                return other.getResource().equals(notificacao.getResource()) // Verifica se as duas notificações têm o mesmo resource.
-                  && Duration.between(otherDataRecebida, dataRecebida).abs().toMinutes() < 2; //Verifica se o intervalo entre as datas de recebimento (received) das duas notificações é menor que 2 minutos.
-              });//Se noneMatch encontrar uma notificação repetida, a notificação atual será filtrada e não incluída na lista resultante.
-          })
-          .collect(Collectors.toList());
+      List<NotificacaoMLDTO> vNotificacoesFiltradas = new ArrayList<>();
+      Map<String, LocalDateTime> vUltimasNotificacoes = new HashMap<>(); //Armazena a Ultima Notificação Por Resource.
+
+      for (NotificacaoMLDTO vNotificacao : vNotificacoesDoUsuario) {
+        LocalDateTime vDataRecebida = LocalDateTime.parse(vNotificacao.getReceived(), formataData);
+        String vResource = vNotificacao.getResource();
+        if (! vUltimasNotificacoes.containsKey(vResource) || Duration.between(vUltimasNotificacoes.get(vResource), vDataRecebida).toMinutes() >= 2) {
+          //Adiciona a Notifgicação a Lista Filtrada Se Não Houver Repetição Recente
+          vNotificacoesFiltradas.add(vNotificacao);
+          vUltimasNotificacoes.put(vResource, vDataRecebida); //Atualiza a Última Notificação Desse Resource
+        }
       }
-    ));
+      return vNotificacoesFiltradas;
+    }
+  ));
 }
 //endregion
 
-
 //region Função Para Apagar As Notificações No Banco MySql.
 public List<Long> apagarNotificacoes(List<NotificacaoMLDTO> notificacoes) throws SQLException {
-  List<Long> idsNotificacoes = notificacoes.stream()
-    .map(NotificacaoMLDTO::getId)
-    .collect(Collectors.toList());
-  logger.info(" Apagando >------> " + idsNotificacoes.size() + " <------< Notificações !!");
+  List<Long> idsNotificacoes = notificacoes
+  .stream()
+  .map(NotificacaoMLDTO::getId)
+  .collect(Collectors.toList());
+  logger.info(" Apagando " + idsNotificacoes.size() + " Notificações !!");
   return  idsNotificacoes;
 }
 //endregion
 
-
-//region Função Para Extrair o SKU Da tag resource da BNotificação.
+//region Função Para Extrair o SKU Da Tag Resource da Notificação.
 public String extrairSkuMLDasNotificacoes(String resource) {
   if (resource != null && resource.startsWith("/items/")) {
     logger.info(" Extraindo o SKU Da Notificação!! ");
@@ -117,13 +140,13 @@ public double calcularComissaoML(double vComissao, double preco){
 //endregion
 
 //region Função Para Salvar JSON em Arquivo.
-public void gravarJson( Object object, String caminhoArquivo) throws IOException {
-  ObjectMapper mapper = new ObjectMapper();
-  try (FileWriter gravaJson = new FileWriter(caminhoArquivo)) {
-    mapper.enable(SerializationFeature.INDENT_OUTPUT);
-    mapper.writeValue(gravaJson, object);
-  } catch (Exception excecao) {
-    excecao.printStackTrace();
+public void gravaJSON(Object pObjeto, String pCaminhoArquivo) throws IOException {
+  ObjectMapper vMapper = new ObjectMapper();
+  try (FileWriter gravaJson = new FileWriter(pCaminhoArquivo)) {
+    vMapper.enable(SerializationFeature.INDENT_OUTPUT);
+    vMapper.writeValue(gravaJson, pObjeto);
+  } catch (Exception excecaoGravaJson) {
+    excecaoGravaJson.printStackTrace();
   }
 }
 //endregion

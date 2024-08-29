@@ -59,7 +59,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
   //endregion
 
   @Scheduled(fixedRate = 60000)
-  public void executarBuscaPeriodica() throws Exception {
+  public void executaBuscaPeriodica() throws Exception {
     logger.info("Executando Busca de Notificações de Forma Automática...");
     buscarTodasNotificacoes(notificacaoMercadoLivreRepository);
   }
@@ -67,17 +67,24 @@ public class NotificacaoServiceImpl implements NotificacaoService {
   @Override
   public void buscarTodasNotificacoes(NotificacaoMercadoLivreRepository notificacaoMercadoLivreRepository) throws Exception {
 
-    logger.info("Buscando Todas As Notificações Do Mercado Livre!!!");
+		//region Buscando Todas As Notificações No Mysql.
+		logger.info("Buscando Todas As Notificações Do Mercado Livre!!!");
     List<NotificacaoML> vTodasNotificacoes = notificacaoMercadoLivreRepository.findAll();
+		//endregion
 
-    List<NotificacaoMLDTO> vNotificacoesML = ModelMapperMapping.parseListObjects(vTodasNotificacoes, NotificacaoMLDTO.class);
-    if (vNotificacoesML != null) {
+		//region Transforma As Notificações Em DTO.
+		List<NotificacaoMLDTO> vNotificacoesML = ModelMapperMapping.parseListObjects(vTodasNotificacoes, NotificacaoMLDTO.class);
+		//endregion
+
+		//region Se a Lista De Notificações Não está vazia.
+		if (vNotificacoesML != null) {
 
       logger.info("Lista de Notificações Existe!!. Mapeando Lista De Notificações Por User_Id!!");
       logger.info("Agrupando Notificações e Ordenando Por Maior Quantidade!!");
       Map<String, List<NotificacaoMLDTO>> vNotificacoesFiltradas = utils.agruparEFiltrarNotificacoes(vNotificacoesML);
 
-      for (Map.Entry<String, List<NotificacaoMLDTO>> entry : vNotificacoesFiltradas.entrySet()) {
+			//region Processa Cada Notificação Da Lista.
+			for (Map.Entry<String, List<NotificacaoMLDTO>> entry : vNotificacoesFiltradas.entrySet()) {
         String                                 userId = entry.getKey();
         List<NotificacaoMLDTO> vNotificacoesDoUsuario = entry.getValue();
 
@@ -86,36 +93,47 @@ public class NotificacaoServiceImpl implements NotificacaoService {
 
         Optional<SellerMercadoLivre> sellerMercadoLivre = sellerRepository.findIdentificadorClienteBySellerId(userId);
 
-        if (sellerMercadoLivre.isPresent()) {
+				//region Se o Seller Foi Encontrado Na Tabela de Sellers Do Mercado Livre.
+				if (sellerMercadoLivre.isPresent()) {
           SellerMercadoLivre   vSeller               = sellerMercadoLivre.get();
           String               vIdentificadorCliente = vSeller.getIdentificadorCliente();
 
-          logger.info("Seller Encontrado.");
+					//region Busca Dados de Acesso Do Seller(user_id) No Banco.
+					logger.info("Seller Encontrado.");
           Optional<ConexaoDTO> acessoCliente = Optional.ofNullable(acessoApiCadClientesRepository.findByIdentificadorCliente(vIdentificadorCliente));
           logger.info("Buscando Dados de Conexão Do Seller.");
+					//endregion
 
-          if (acessoCliente.isPresent()) {
+					//region Se o Acesso Do Seller Fi encontrado No Banco.
+					if (acessoCliente.isPresent()) {
             ConexaoDTO vAcessoCliente = acessoCliente.get();
             String     banco          = vAcessoCliente.getBanco();
             logger.info("Dados Encontrados!!! Conectando No Banco");
 
-            try (Connection conexaoSQLServer  = Conexao.conectar(vAcessoCliente)) {
-              if (conexaoSQLServer.isValid(2500)) {
+						//region Conecta No Banco Do Seller.
+						try (Connection conexaoSQLServer  = Conexao.conectar(vAcessoCliente)) {
+              if (conexaoSQLServer != null && conexaoSQLServer.isValid(2500)) {
                 logger.info("SUCESSO: Conectado Ao Banco" );
 
-                // Verificando o Parâmetro `IGNORAR_GETSKU` Do Banco Do Cliente
+                //region Se o Parâmetro `IGNORAR_GETSKU` For Sim No Banco Do Seller.
                 if (operacoesNoBanco.ignorarGetSku(conexaoSQLServer)) {
                   logger.info("IgnorarGetSKU Definido Como (S). Apagar Notificações.");
                   notificacaoMercadoLivreRepository.deleteAllById(utils.apagarNotificacoes(vNotificacoesDoUsuario));
                   logger.info("SUCESSO: Notificações Apagadas!!");
 
-                  //Verificando Origem Ativa No Banco Do Seller
-                } else if (!operacoesNoBanco.buscaParamPedido(conexaoSQLServer, userId)) {
+                } //endregion
+
+                //region Se Origem Não Estiver Ativa No Banco Do Seller.
+                else if (!operacoesNoBanco.buscaParamPedido(conexaoSQLServer, userId)) {
                   logger.info("Parâmetro Pedido é  (N)  Apagar Notificações.");
                   notificacaoMercadoLivreRepository.deleteAllById(utils.apagarNotificacoes(vNotificacoesDoUsuario));
                   logger.info("Notificações Apagadas Com Sucesso!!");
 
-                } else {
+                } //endregion
+
+
+								//region Não Ignorar GETSKU e Origem Está Ativa.
+								else {
 
                   //region Obtem Dados Da ECOM_METODOS.
                   DadosEcomMetodosDTO vDadosEcomMetodosDTO = operacoesNoBanco.buscarTokenTemp(conexaoSQLServer, userId);
@@ -180,11 +198,12 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                         InfoItemsMLDTO objItensEcomSku = operacoesNoBanco.buscaProdutoNaECOM_SKU(conexaoSQLServer, vSkuNotificacao);
 
                         if (objItensEcomSku == null) {
-                          /**
-                           * Depois de Buscar o SKU ATUAL que está na notifcação lá no Banco do cliente, Vefificamos:
-                           * Se, não existir este SKU no banco, Devemos fazer um INSERT do atual SKU no Banco.
-                           * Se, o SKU ATUAL Existir no banco, Atualizamos suas informações
-                           * */
+                          /*
+                            Depois de Buscar o SKU ATUAL que está na notifcação lá no Banco do cliente, Vefificamos:
+                            Se, não existir este SKU no banco, Devemos fazer um INSERT do atual SKU no Banco.
+                            Se, o SKU ATUAL Existir no banco, Atualizamos suas informações
+                            @Author Thonwelling
+                          */
                           logger.info("O SKU  " + vSkuNotificacao + "  Não Existe No Tabela ECOM_SKU Do Seller!!");
                           continue;
                         }
@@ -203,7 +222,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                           //Verificando se existe o campo variations e pegando a quantidade de registros!
                           ArrayList<VariacaoDTO> arrVariacoes = objRespostaAPI.getVariations();
 
-                          if (arrVariacoes.size() == 0) {
+                          if (arrVariacoes.isEmpty()) {
 
                             //region Sem Variação.
                             String vVariationId = "";
@@ -222,7 +241,8 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                               excecao.printStackTrace();
                             }
                             if (vInventoryIdGET.length() > 2) {
-                              /**ML_Inventario_Full(pOrig, vInventoryIdGET) ;*/
+                              //ML_Inventario_Full(pOrig, vInventoryIdGET);
+                              logger.warning("Implementar Método de Inventário");
 
                             }
                             // endregion
@@ -256,7 +276,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                               //endregion
 
                               //region Retira o Ultimo Espaço e , Da String Final.
-                              if (vVarBuilder.length() > 0) {
+                              if (! vVarBuilder.isEmpty()) {
                                 vVarBuilder.setLength(vVarBuilder.length() - 2);
                               }
                               String vVar = vVarBuilder.toString();
@@ -277,8 +297,8 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                                 excecao.printStackTrace();
                               }
                               if (vInventoryIdGET.length() > 2) {
-                                /**ML_Inventario_Full(pOrig, vInventoryIdGET) ;*/
-
+                                //ML_Inventario_Full(pOrig, vInventoryIdGET);
+                                System.out.println("Implementar Método de Inventário");
                               }
                             }
 
@@ -334,12 +354,19 @@ public class NotificacaoServiceImpl implements NotificacaoService {
 
 
                 }
+								//endregion
               }
             }
+						//endregion
           }
+					//endregion
         }
+				//endregion
       }
+			//endregion
     }
+		//endregion
+
   }
 
 
