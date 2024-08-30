@@ -15,7 +15,7 @@ import java.util.ArrayList;
 @Setter
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class VariacaoDTO {
-  private Long id;
+  private String id;
   private double price;
   private int availableQuantity;
   private int soldQuantity;
