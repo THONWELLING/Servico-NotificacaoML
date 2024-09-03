@@ -105,7 +105,7 @@ public List<Long> apagarNotificacoes(List<NotificacaoMLDTO> notificacoes) throws
 //region Função Para Extrair o SKU Da Tag Resource da Notificação.
 public String extrairSkuMLDasNotificacoes(String resource) {
   if (resource != null && resource.startsWith("/items/")) {
-    logger.info(" Extraindo o SKU Da Notificação!! ");
+    logger.info("Extraindo o SKU Da Notificação");
     return resource.substring("/items/".length());
   }
   return null;

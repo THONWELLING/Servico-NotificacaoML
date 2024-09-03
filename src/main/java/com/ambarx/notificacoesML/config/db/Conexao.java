@@ -40,10 +40,10 @@ public class Conexao {
       //System.setProperty("jdk.tls.client.protocols", "TLSv1,TLSv1.1,TLSv1.2,TLSv1.3");
       logger.info("Conectando Ao Banco" + database);
       String urlConexao = "";
-      if (database.equalsIgnoreCase("Ambar70")) {
-        urlConexao = "jdbc:sqlserver://" + server + ":" + port + ";databaseName=" + database + ";ssl=ignore;encrypt=false;trustServerCertificate=true";
+      if (database.equalsIgnoreCase("Ambar70") || database.equalsIgnoreCase("BancoAmbarTRP")) {
+        urlConexao = "jdbc:sqlserver://" + server + ":" + port + ";databaseName=" + database + ";encrypt=true;trustServerCertificate=true";
       } else {
-        urlConexao = "jdbc:sqlserver://" + server + ":" + port + ";databaseName=" + database + ";encrypt=false;trustServerCertificate=true";
+        urlConexao = "jdbc:sqlserver://" + server + ":" + port + ";databaseName=" + database + ";encrypt=true;trustServerCertificate=true";
       }
       return DriverManager.getConnection(urlConexao, usuarioSql, senhaSql);
     }
