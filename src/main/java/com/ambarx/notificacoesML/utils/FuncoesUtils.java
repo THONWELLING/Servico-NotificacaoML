@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 @Service
@@ -113,7 +114,7 @@ public String extrairSkuMLDasNotificacoes(String resource) {
 //endregion
 
 //region Função Para Arredondar Casas Decimais Dos Centavos.
-public double arredondarParaDuasCasasDecimais(double valor) {
+public static double arredondarParaDuasCasasDecimais(double valor) {
   BigDecimal resultado = new BigDecimal(valor).setScale(2, RoundingMode.HALF_UP);
   return resultado.doubleValue();
 }
@@ -139,6 +140,33 @@ public double calcularComissaoML(double vComissao, double preco){
 }
 //endregion
 
+//region Função Para Calcular o Custo Adicional.
+public double calculaCustoAdicional(double pComissao, double pPreco, String pSupermercado) {
+  double vCustoAdicional = 0.00;
+	if (pComissao > 0) {
+    double vComissao = arredondarParaDuasCasasDecimais(pComissao);
+		if (!"S".equalsIgnoreCase(pSupermercado)) {
+			if (pPreco < 79) {
+				if (vComissao > 18){
+          vCustoAdicional = 6;
+        }
+			}
+		} else {
+      if (pPreco < 30) {
+        vCustoAdicional = 1;
+      } else if (pPreco >= 30 && pPreco < 50) {
+        vCustoAdicional = 2;
+      } else if (pPreco >= 50 && pPreco < 100) {
+        vCustoAdicional = 4;
+      } else if (pPreco >= 100 && pPreco < 199) {
+        vCustoAdicional = 6;
+      }
+    }
+	}
+  return vCustoAdicional;
+}
+//endregion
+
 //region Função Para Salvar JSON em Arquivo.
 public void gravaJSON(Object pObjeto, String pCaminhoArquivo) throws IOException {
   ObjectMapper vMapper = new ObjectMapper();
@@ -146,7 +174,8 @@ public void gravaJSON(Object pObjeto, String pCaminhoArquivo) throws IOException
     vMapper.enable(SerializationFeature.INDENT_OUTPUT);
     vMapper.writeValue(gravaJson, pObjeto);
   } catch (Exception excecaoGravaJson) {
-    excecaoGravaJson.printStackTrace();
+    logger.log(Level.SEVERE, "Erro Ao Gravar JSON Na Temp.");
+    throw excecaoGravaJson;
   }
 }
 //endregion

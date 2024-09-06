@@ -5,12 +5,13 @@ import com.ambarx.notificacoesML.dto.conexao.ConexaoDTO;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Conexao {
+  private static final Logger logger = Logger.getLogger(Conexao.class.getName());
 
   public static Connection conectar(ConexaoDTO cliente) throws SQLException {
-    Logger logger = Logger.getLogger(Conexao.class.getName());
     String port   = "1433";
     String server = System.getenv(cliente.getServidor());
 
@@ -20,7 +21,7 @@ public class Conexao {
         String[] partes = server.split(",");
         if (partes.length == 2) {
           server = partes[0];
-          port = partes[1];
+          port   = partes[1];
         }
       }
     }
@@ -50,12 +51,13 @@ public class Conexao {
     return null;
   }
 
-  public static void fecharConexao(Connection conexao) {
+  public static void fecharConexao(Connection conexao) throws SQLException {
     if (conexao != null) {
       try {
         conexao.close();
       } catch (SQLException e) {
-        e.printStackTrace();
+        logger.log(Level.SEVERE,"Erro Ao Fechar Conexão", e);
+        throw e;
       }
     }
   }

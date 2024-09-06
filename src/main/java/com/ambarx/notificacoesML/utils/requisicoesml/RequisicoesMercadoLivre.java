@@ -24,8 +24,9 @@ public class RequisicoesMercadoLivre {
 
 private static final Logger logger = Logger.getLogger(RequisicoesMercadoLivre.class.getName());
 private static MercadoLivreHttpClient mercadoLivreHttpClient = null;
+
 @Autowired
-private static FuncoesUtils utils = new FuncoesUtils();
+private static final FuncoesUtils utils = new FuncoesUtils();
 
 @Autowired
 public RequisicoesMercadoLivre(RestTemplate restTemplate) {
@@ -67,8 +68,8 @@ public static double fazerRequisicaoGetFrete(String userId, String skuML, String
     FreteDTO respostaAPIFrete = ModelMapperMapping.parseObject(mercadoLivreHttpClient.fazerRequisicao(urlFrete, tokenSeller, FreteDTO.class), FreteDTO.class);
     utils.gravaJSON(respostaAPIFrete, "C:/Ambar/Temp/RetornoGetFreteMl.txt");
     return respostaAPIFrete != null ? respostaAPIFrete.getCoverage().getAllCountry().getListCost() : 0.00;
-  } catch (Exception excecao) {
-    excecao.printStackTrace();
+  } catch (Exception excecaoFrete) {
+    logger.log(Level.SEVERE, "Erro Ao Buscar Dados Na API De FreTe.");
     return 0.00;
   }
 }
