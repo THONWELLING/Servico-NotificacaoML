@@ -415,22 +415,22 @@ public class OperacoesNoBanco {
     logger.info("Inserindo Dados do SKU Na Tabela ML_SKU_FULL");
 
     String Qry_InsertEcomSkuSemVinculo = "INSERT INTO ECOM_SKU_SEMVINCULO (DATAHR, ORIGEM_ID, SKU, SELLER_SKU, TITULO, VALOR, LINK_URL, LINK_IMAGE, CODID, VARIACOES) " +
-                                                                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                                                                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     Date vDataHr = new Date(System.currentTimeMillis());
     try (PreparedStatement statement = pConexao.prepareStatement(Qry_InsertEcomSkuSemVinculo)) {
 
       //region Preenche Parâmetos da Query.
-      statement.setDate(   1,  vDataHr);
-      statement.setInt(    2,  pOrigem);
-      statement.setString( 3,  pSkuML);
-      statement.setString( 4,  pSellerSku);
-      statement.setString( 5,  pTitulo);
-      statement.setDouble( 6, pPreco);
-      statement.setString( 7, pAnuncioUrl);
-      statement.setString( 8, pImagemUrl);
-      statement.setInt(    9,  pCodID);
-      statement.setInt(    9,  pVariacoes);
+      statement.setDate(  1, vDataHr);
+      statement.setInt(   2, pOrigem);
+      statement.setString(3, pSkuML);
+      statement.setString(4, pSellerSku);
+      statement.setString(5, pTitulo);
+      statement.setDouble(6, pPreco);
+      statement.setString(7, pAnuncioUrl);
+      statement.setString(8, pImagemUrl);
+      statement.setInt(   9, pCodID);
+      statement.setInt(  10, pVariacoes);
       //endregion
 
       statement.executeUpdate();
@@ -465,7 +465,7 @@ public class OperacoesNoBanco {
       statement.setDouble(7, pPreco);
       statement.setString(8, pAnuncioUrl);
       statement.setString(9, pImagemUrl);
-      statement.setInt(  10,  pCodID);
+      statement.setInt(  10, pCodID);
       //endregion
 
       statement.executeUpdate();

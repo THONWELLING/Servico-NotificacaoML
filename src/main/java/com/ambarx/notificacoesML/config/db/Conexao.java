@@ -42,7 +42,7 @@ public class Conexao {
       logger.info("Conectando Ao Banco" + database);
       String urlConexao = "";
       if (database.equalsIgnoreCase("Ambar70") || database.equalsIgnoreCase("BancoAmbarTRP")) {
-        urlConexao = "jdbc:sqlserver://" + server + ":" + port + ";databaseName=" + database + ";encrypt=true;trustServerCertificate=true";
+        urlConexao = "jdbc:sqlserver://" + server + ":" + port + ";databaseName=" + database + ";encrypt=true;trustServerCertificate=true;sslProtocol=TLSv1.2;";
       } else {
         urlConexao = "jdbc:sqlserver://" + server + ":" + port + ";databaseName=" + database + ";encrypt=true;trustServerCertificate=true";
       }
