@@ -3,15 +3,48 @@ package com.ambarx.notificacoesML.utils.operacoesNoBanco;
 import com.ambarx.notificacoesML.dto.infodobanco.DadosEcomMetodosDTO;
 import com.ambarx.notificacoesML.dto.infodobanco.DadosMlSkuFullDTO;
 import com.ambarx.notificacoesML.dto.item.InfoItemsMLDTO;
+import com.ambarx.notificacoesML.dto.notificacao.NotificacaoMLDTO;
+import com.ambarx.notificacoesML.repositories.NotificacaoMLItensRepository;
+import com.ambarx.notificacoesML.utils.FuncoesUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Component;
 
 import java.sql.*;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 
 @Component
 public class OperacoesNoBanco {
   private static final Logger logger = Logger.getLogger(OperacoesNoBanco.class.getName());
+
+  @Autowired
+  NotificacaoMLItensRepository itensRepository;
+  private final FuncoesUtils utils = new FuncoesUtils();
+
+	//region Função Para Deletar Uma Notificação Por ID.
+	public void deletaNotificacaoPorID(Long pIDNotificacaoAtual) {
+    try {
+      itensRepository.deleteById(pIDNotificacaoAtual);
+    } catch(EmptyResultDataAccessException excecao) {
+      logger.log(Level.WARNING, "Notificação com o ID " + pIDNotificacaoAtual + ", Não Existe Ou Já Foi Deletada. Continuando Execução.", excecao);
+    }
+  }
+	//endregion
+
+	//region Função Deleta Todas As Notificações Do Seller Atual.
+	public void deletaNotificacoesDoSeller(List<NotificacaoMLDTO> pArrNotificacoesUsuarioAtual) {
+    try {
+      itensRepository.deleteAllById(utils.pegarIDsDasNotificacoesDoUsuario(pArrNotificacoesUsuarioAtual));
+    } catch (EmptyResultDataAccessException excecao) {
+      logger.log(Level.WARNING, "ERRO: Notificação Pode Já Ter Sido Deletada Da Tabela. Detalhes: " + excecao.getMessage());
+    } catch (Exception e) {
+      logger.log(Level.SEVERE,"ERRO: Ocorreu Um Erro Inesperado Ao Deletar as Notificações. Detalhes: " + e.getMessage());
+    }
+  }
+	//endregion
 
   //region Função Para Buscar o Valor Parâmetro IGNORAR_GETSKU.
   public boolean ignorarGetSku(Connection pConexao) throws SQLException {
@@ -449,7 +482,7 @@ public class OperacoesNoBanco {
 
     logger.info("Inserindo Variações do SKU Na Tabela ML_SKU_FULL.");
 
-    String Qry_InsertVariacEcomSkuSemVinculo = "INSERT INTO ECOM_SKU_SEMVINCULO (DATAHR, ORIGEM_ID, SKU, SKU_VAR, SELLER_SKU, TITULO, VALOR, LINK_URL, LINK_IMAGE, CODID) " +
+    String Qry_InsertVariacEcomSkuSemVinculo = "INSERT INTO ECOM_SKU_SEMVINCULO (DATAHR, ORIGEM_ID, SKU, SKUVAR, SELLER_SKU, TITULO, VALOR, LINK_URL, LINK_IMAGE, CODID) " +
                                                                   "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     Date vDataHr = new Date(System.currentTimeMillis());

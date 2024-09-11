@@ -11,15 +11,18 @@ import com.ambarx.notificacoesML.dto.item.VariacaoDTO;
 import com.ambarx.notificacoesML.dto.notificacao.NotificacaoMLDTO;
 import com.ambarx.notificacoesML.httpclients.MercadoLivreHttpClient;
 import com.ambarx.notificacoesML.mapper.ModelMapperMapping;
-import com.ambarx.notificacoesML.models.NotificacaoML;
+import com.ambarx.notificacoesML.models.NotificacaoMLItens;
+import com.ambarx.notificacoesML.models.NotificacaoUserProductFamiliesMLDTO;
 import com.ambarx.notificacoesML.models.SellerMercadoLivre;
 import com.ambarx.notificacoesML.repositories.AcessoApiCadClientesRepository;
-import com.ambarx.notificacoesML.repositories.NotificacaoMercadoLivreRepository;
+import com.ambarx.notificacoesML.repositories.NotificacaoMLItensRepository;
+import com.ambarx.notificacoesML.repositories.NotificacaoMLUserProductsFamiliesRepository;
 import com.ambarx.notificacoesML.repositories.SellerMercadoLivreRepository;
 import com.ambarx.notificacoesML.utils.FuncoesUtils;
 import com.ambarx.notificacoesML.utils.operacoesNoBanco.OperacoesNoBanco;
 import com.ambarx.notificacoesML.utils.requisicoesml.RequisicoesMercadoLivre;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -30,20 +33,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Service
-public class NotificacaoServiceImpl implements NotificacaoService {
-  private final Logger logger = Logger.getLogger(NotificacaoServiceImpl.class.getName());
+public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensService {
+  private final Logger logger = Logger.getLogger(NotificacaoItensMLItensServiceImpl.class.getName());
 
   //region Injeção De Dependências Necessárias.
   @Autowired
   private SellerMercadoLivreRepository sellerRepository;
   @Autowired
   private AcessoApiCadClientesRepository acessoApiCadClientesRepository;
-
   @Autowired
-  private NotificacaoMercadoLivreRepository notificacaoMercadoLivreRepository;
+  private NotificacaoMLItensRepository notificacaoMLItensRepository;
+  @Autowired
+  private NotificacaoMLUserProductsFamiliesRepository notificacaoMLUserProductsFamiliesRepository;
   private final FuncoesUtils utils = new FuncoesUtils();
 
   @Autowired
@@ -52,7 +57,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
   OperacoesNoBanco operacoesNoBanco;
 
   @Autowired
-  public NotificacaoServiceImpl(RestTemplate restTemplate, RequisicoesMercadoLivre requisicoesMercadoLivre) {
+  public NotificacaoItensMLItensServiceImpl(RestTemplate restTemplate, RequisicoesMercadoLivre requisicoesMercadoLivre) {
     MercadoLivreHttpClient mercadoLivreHttpClient = new MercadoLivreHttpClient(restTemplate);
     this.requisicoesMercadoLivre = requisicoesMercadoLivre;
   }
@@ -60,17 +65,35 @@ public class NotificacaoServiceImpl implements NotificacaoService {
   //endregion
 
   @Scheduled(fixedRate = 60000)
-  public void executaBuscaPeriodica() throws Exception {
-    logger.info("Executando Busca de Notificações de Forma Automática...");
-    buscarTodasNotificacoes(notificacaoMercadoLivreRepository);
-  }
+  public void executaThreadDeItens() throws Exception {
+		try {
+			logger.info("Executando Busca de Notificações de Forma Automática...");
+			buscarTodasNotificacoes(notificacaoMLItensRepository);
+		} catch (Exception e) {
+			logger.log(Level.WARNING, "Erro Na Execução Da Tarefa " + e.getMessage());
+		}
+	}
+
+  @Scheduled(fixedRate = 60000)
+  public void executaThreadDeUserProductsFamilies() throws Exception {
+		try {
+			logger.info("Executando Busca de Notificações de Forma Automática...");
+			processaNotificacoesUserProductsFamilies(notificacaoMLUserProductsFamiliesRepository);
+		} catch (EmptyResultDataAccessException excecao) {
+			logger.log(Level.WARNING, "Nenhuma Notificação Encontrada: " + excecao.getMessage());
+		} catch (SQLException excecaoSql) {
+      logger.log(Level.SEVERE, "Erro De Banco de Dados: " + excecaoSql.getMessage(), excecaoSql);
+    } catch (Exception e) {
+      logger.log(Level.SEVERE, "Erro Inesperado: " + e.getMessage(), e);
+    }
+	}
 
   @Override
-  public void buscarTodasNotificacoes(NotificacaoMercadoLivreRepository notificacaoMercadoLivreRepository) throws Exception {
+  public void buscarTodasNotificacoes(NotificacaoMLItensRepository notificacaoMLItensRepository) throws Exception {
 
     //region Buscando Todas As Notificações No Mysql.
-    logger.info("Buscando Todas As Notificações Do Mercado Livre!!!");
-    List<NotificacaoML> vTodasNotificacoes = notificacaoMercadoLivreRepository.findAll();
+    logger.info("Buscando Todas As Notificações De Itens Do Mercado Livre!!!");
+    List<NotificacaoMLItens> vTodasNotificacoes = notificacaoMLItensRepository.findAll();
     //endregion
 
     //region Transforma As Notificações Em DTO.
@@ -121,15 +144,14 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                 //region Se o Parâmetro `IGNORAR_GETSKU` For Sim No Banco Do Seller.
                 if (operacoesNoBanco.ignorarGetSku(conexaoSQLServer)) {
                   logger.info("IgnorarGetSKU Definido Como (S). Apagar Notificações.");
-                  notificacaoMercadoLivreRepository.deleteAllById(utils.apagarNotificacoes(arrNotificacoesUsuarioAtual));
+                  operacoesNoBanco.deletaNotificacoesDoSeller(arrNotificacoesUsuarioAtual);
                   logger.info("SUCESSO: Notificações Apagadas!!");
-
                 } //endregion
 
                 //region Se Origem Não Estiver Ativa No Banco Do Seller.
                 else if (! operacoesNoBanco.buscaParamPedido(conexaoSQLServer, userId)) {
                   logger.info("Parâmetro Pedido é  (N)  Apagar Notificações.");
-                  notificacaoMercadoLivreRepository.deleteAllById(utils.apagarNotificacoes(arrNotificacoesUsuarioAtual));
+                  operacoesNoBanco.deletaNotificacoesDoSeller(arrNotificacoesUsuarioAtual);
                   logger.info("Notificações Apagadas Com Sucesso!!");
 
                 } //endregion
@@ -159,6 +181,15 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                       if (objRespostaAPI != null) {
                         logger.info("SUCESSO: JSON GET Item Do Mercado Livre Capturado!!");
                         logger.info("Resposta Da API Do Mercado Livre: " + objRespostaAPI.toString());
+
+												//region Se Não For Full No GET (APAGA NOTIFICAÇÃO SEM FAZER NADA).
+												if (!objRespostaAPI.getShipping().getLogisticType().equalsIgnoreCase("fulfillment")) {
+                          logger.info("Não É Full No GET De Items Mercado Livre.");
+                          notificacaoMLItensRepository.deleteById(objNotificacao.getId());
+                          logger.info("Notificação Apagada Com Sucesso.");
+                          continue;
+                        }
+												//endregion
 
                         //region Pegando Dados Do JSON Response
                         String vSellerSkuGET     = "";
@@ -200,6 +231,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                             }*/
                           }
                           //endregion
+
                         }
 												//endregion
 
@@ -233,21 +265,21 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                         }
                         //endregion
 
-                        //region Fazendo o GET da Comissão No Mercado Livre e Custo Adicional.
-                        double vValorComissao = RequisicoesMercadoLivre.fazerRequisicaoGetComissaoML(vTipoDeAnuncioGET, vPrecoNoGET, vCategoriaGET, vTokenTempSeller);
-                        logger.info("Valor da Comissão No ML " + vValorComissao + "%");
-                        double  vCustoAdicional = utils.calculaCustoAdicional(vValorComissao, vPrecoNoGET, vSupermercado);
-                        //endregion
-
-                        //region Frete Fazendo o GET do Valor Do Frete No Mercado Livre
-                        double vValorFrete = RequisicoesMercadoLivre.fazerRequisicaoGetFrete(userId, vSkuNotificacao, vTokenTempSeller);
-                        logger.info("Valor do Frete No ML R$ " + vValorFrete);
-                        //endregion
-
-                        //region Verifica Se É Full No GET.
+                        //region  Se É Full No GET PROCESSA.
                         if (vEFullNoGET.equalsIgnoreCase("S")) {
                           String vCatalogoGET    = objRespostaAPI.isCatalogListing() ? "S" : "N";
                           String vRelacionadoGET = objRespostaAPI.getItemRelations() != null && ! objRespostaAPI.getItemRelations().isEmpty() ? "S" : "N";
+
+                          //region Fazendo o GET da Comissão No Mercado Livre e Custo Adicional(SÓ VAI USAR SE FOR ATUALIZAR ECOM_SKU).
+                          /*double vValorComissao = RequisicoesMercadoLivre.fazerRequisicaoGetComissaoML(vTipoDeAnuncioGET, vPrecoNoGET, vCategoriaGET, vTokenTempSeller);
+                          logger.info("Valor da Comissão No ML " + vValorComissao + "%");
+                          double  vCustoAdicional = utils.calculaCustoAdicional(vValorComissao, vPrecoNoGET, vSupermercado);*/
+                          //endregion
+
+                          //region Frete Fazendo o GET do Valor Do Frete No Mercado Livre(SÓ VAI USAR SE FOR ATUALIZAR ECOM_SKU)
+                          /*double vValorFrete = RequisicoesMercadoLivre.fazerRequisicaoGetFrete(userId, vSkuNotificacao, vTokenTempSeller);
+                          logger.info("Valor do Frete No ML R$ " + vValorFrete);*/
+                          //endregion
 
                           //region Sem Variação.
                           if (arrVariacoes.isEmpty()) {
@@ -262,7 +294,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
 																} catch (SQLException excecao) {
 																	logger.severe("ERRO: " + excecao.getMessage());
 																}
-																notificacaoMercadoLivreRepository.deleteById(objNotificacao.getId());
+                                operacoesNoBanco.deletaNotificacaoPorID(objNotificacao.getId());
                               } else {
                                 logger.info("Atualizando o Sku atual na tabela ml_sku_full ");
 																try {
@@ -270,7 +302,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
 																} catch (SQLException excecao) {
 																	logger.severe("ERRO: " + excecao.getMessage());
 																}
-																notificacaoMercadoLivreRepository.deleteById(objNotificacao.getId());
+                                operacoesNoBanco.deletaNotificacaoPorID(objNotificacao.getId());
                               }
 
                             } catch (SQLException excecao) { excecao.getCause(); }
@@ -329,7 +361,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                                   } catch (SQLException excecao) {
                                     logger.severe("ERRO: " + excecao.getMessage());
                                   }
-                                  notificacaoMercadoLivreRepository.deleteById(objNotificacao.getId());
+                                  operacoesNoBanco.deletaNotificacaoPorID(objNotificacao.getId());
                                 } else {
                                   logger.info("Atualizando o Sku atual na tabela ml_sku_full ");
                                   try {
@@ -337,7 +369,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                                   } catch (SQLException excecao) {
                                     logger.severe("ERRO: " + excecao.getMessage());
                                   }
-                                  notificacaoMercadoLivreRepository.deleteById(objNotificacao.getId());
+                                  operacoesNoBanco.deletaNotificacaoPorID(objNotificacao.getId());
                                 }
                               } catch (SQLException excecao) {
                                 excecao.getCause();
@@ -350,8 +382,6 @@ public class NotificacaoServiceImpl implements NotificacaoService {
 
                           } //endregion
 
-                        } else {
-                          logger.info("Não É Full No GET De Items Mercado Livre.");
                         }
                         //endregion
 
@@ -391,14 +421,14 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                                   excecao.getCause();
                                 }
                               }
-                              operacoesNoBanco.inserirVariacNaTabelaEcomSkuSemVinculo(conexaoSQLServer, vOrigem, vSkuNotificacao, vIdVariacao, vSellerSKUVariac, vTituloGET, vVariacao.getPrice(), vLinkAnuncioGET, vUrlImagem, vCodID);
+                              operacoesNoBanco.inserirVariacNaTabelaEcomSkuSemVinculo(conexaoSQLServer, vOrigem, vSkuNotificacao, vIdVariacao, vSellerSKUVariac, vTituloGET, vVariacaoPreco, vLinkAnuncioGET, vUrlImagem, vCodID);
                             }
 
                           }
 
                         }//endregion
 
-												//region Atualiza Dados e EstoqueNa ECOM_SKU.
+												//region Atualiza Dados e EstoqueNa ECOM_SKU(COMENTADO POR ENQUANTO).
                         /*if (!vCategoriaGET.isEmpty()) {
                           if (vEstoque >= 0) {
                             operacoesNoBanco.atualizaDadosEEstoqNaECOMSKU(conexaoSQLServer, vEstoque, vEstaAtivoNoGET, vEFullNoGET, vValorFrete, vCustoAdicional, vValorComissao, vPrecoNoGET, vPrecoNoGET, vSkuNotificacao);
@@ -412,6 +442,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                         logger.warning("Erro Ao Consultar API Requisição Não Retornou Resultado.");
                       }
                       //endregion
+
                     }
 
                   } //endregion
@@ -419,6 +450,8 @@ public class NotificacaoServiceImpl implements NotificacaoService {
                 } //endregion
 
               } //endregion
+            } catch (SQLException excecao) {
+              logger.log(Level.SEVERE,"ERRO: Falha Ao Conectar No Banco Do User ID: " + userId, excecao);
             }
             //endregion
 
@@ -427,7 +460,7 @@ public class NotificacaoServiceImpl implements NotificacaoService {
           //region Dados de Acesso Não Encontrados.
           else {
             logger.warning("Dados de Acesso Do Seller Não Encontrado Na Tabela. Apagando Notificações");
-            notificacaoMercadoLivreRepository.deleteAllById(utils.apagarNotificacoes(arrNotificacoesUsuarioAtual));
+            operacoesNoBanco.deletaNotificacoesDoSeller(arrNotificacoesUsuarioAtual);
           }
           //endregion
 
@@ -436,13 +469,39 @@ public class NotificacaoServiceImpl implements NotificacaoService {
         //region Seller Não Encontrado.
         else {
           logger.warning("Seller Não Encontrado no Mercado Livre");
-          notificacaoMercadoLivreRepository.deleteAllById(utils.apagarNotificacoes(arrNotificacoesUsuarioAtual));
-        } //endregion
+          operacoesNoBanco.deletaNotificacoesDoSeller(arrNotificacoesUsuarioAtual);
+				} //endregion
 
       } //endregion
 
     }
     //endregion
 
+  }
+
+  @Override
+  public void processaNotificacoesUserProductsFamilies(NotificacaoMLUserProductsFamiliesRepository notificacaoMLUserProductsFamiliesRepository) throws Exception {
+
+    //region Buscando Todas As Notificações No Mysql.
+    logger.info("Buscando Todas As Notificações De User Products Families Do Mercado Livre!!!");
+    List<NotificacaoUserProductFamiliesMLDTO> vTodasNotificacoesUserProductsFamilies = notificacaoMLUserProductsFamiliesRepository.findAll();
+    //endregion
+
+    //region Transforma As Notificações Em DTO.
+    List<NotificacaoMLDTO> vNotificacoesMLUserFiltradas = ModelMapperMapping.parseListObjects(vTodasNotificacoesUserProductsFamilies, NotificacaoMLDTO.class);
+    //endregion
+
+    if (!vTodasNotificacoesUserProductsFamilies.isEmpty()) {
+      logger.info("Lista de Notificações Existe!!. Mapeando Lista De Notificações Por User_Id!!");
+      Map<String, List<NotificacaoMLDTO>> vNotificacoesFiltradas = utils.agruparEFiltrarNotificacoes(vNotificacoesMLUserFiltradas);
+
+      for (Map.Entry<String, List<NotificacaoMLDTO>> entry : vNotificacoesFiltradas.entrySet()) {
+        List<NotificacaoMLDTO> arrNotificacoesUsuarioAtual = entry.getValue();
+
+        logger.info("Apagar Notificações.");
+        operacoesNoBanco.deletaNotificacoesDoSeller(arrNotificacoesUsuarioAtual);
+        logger.info(arrNotificacoesUsuarioAtual.size() + " Apagadas Com sucesso.");
+      }
+    }
   }
 }

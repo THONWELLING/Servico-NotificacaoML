@@ -17,8 +17,8 @@ import java.util.Objects;
 @Getter
 @NoArgsConstructor
 @Setter
-@Table(name = "notificacao_mercadolivre_items")
-public class NotificacaoML implements Serializable {
+@Table(name = "notificacao_mercadolivre_user_products_families")
+public class NotificacaoUserProductFamiliesMLDTO implements Serializable {
   @Id
   @Column(name = "id")
   private Long   id;
@@ -35,13 +35,15 @@ public class NotificacaoML implements Serializable {
 
   @Override
   public boolean equals(Object o) {
+
     if (this == o) return true;
-    if (!(o instanceof NotificacaoML that)) return false;
-    return Objects.equals(getId(), that.getId()) && Objects.equals(getUserId(), that.getUserId()) && Objects.equals(getResource(), that.getResource()) && Objects.equals(getTopic(), that.getTopic()) && Objects.equals(getReceived(), that.getReceived()) && Objects.equals(getSent(), that.getSent());
+    if (o == null || getClass() != o.getClass()) return false;
+    NotificacaoUserProductFamiliesMLDTO that = (NotificacaoUserProductFamiliesMLDTO) o;
+    return Objects.equals(id, that.id) && Objects.equals(userId, that.userId) && Objects.equals(resource, that.resource) && Objects.equals(topic, that.topic) && Objects.equals(received, that.received) && Objects.equals(sent, that.sent);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getId(), getUserId(), getResource(), getTopic(), getReceived(), getSent());
+    return Objects.hash(id, userId, resource, topic, received, sent);
   }
 }

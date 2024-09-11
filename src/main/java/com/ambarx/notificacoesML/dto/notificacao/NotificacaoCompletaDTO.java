@@ -1,6 +1,6 @@
 package com.ambarx.notificacoesML.dto.notificacao;
 
-import com.ambarx.notificacoesML.models.NotificacaoML;
+import com.ambarx.notificacoesML.models.NotificacaoMLItens;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,7 +21,7 @@ public class NotificacaoCompletaDTO {
   private String mensagemRetorno;
 
 
-  public NotificacaoCompletaDTO(NotificacaoML notificacao, String identificadorCliente, String servidor, String banco) {
+  public NotificacaoCompletaDTO(NotificacaoMLItens notificacao, String identificadorCliente, String servidor, String banco) {
     this.id                   = (long) notificacao.getId();
     this.user_id              = notificacao.getUserId();
     this.resource             = notificacao.getResource();

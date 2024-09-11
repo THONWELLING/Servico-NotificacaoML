@@ -17,11 +17,12 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
 @Service
 public class FuncoesUtils {
 private final Logger logger = Logger.getLogger(FuncoesUtils.class.getName());
 
-//region Função Para Agrupar As Notificações e Filtrar Para Evitar Requisições Desnecessárias
+//region Função Para Agrupar As Notificações De Itens e Filtrar Para Evitar Requisições Desnecessárias
   /**
    * A Função Abaixo Foi Criada Com O Intuito De Eliminar Requisições Desnecessárias Mediante A Eliminação De Notificações Exatamente Iguais Dentro De Um Período De 2 Minutos.
    * Ou Seja, Se Existirem 10 Notificações Exatamente Iguais De Um Mesmo Seller(Userid) E O Período De Recebimento Da Mesma(Received) For Menor Que 2 Min. Entre Elas, Serão Eliminadas
@@ -62,10 +63,10 @@ private final Logger logger = Logger.getLogger(FuncoesUtils.class.getName());
 
   // Agrupando Notificações Por User_Id
   return pNotificacoesML
-  .stream()// Inicia um fluxo (stream) das notificações.
-  .collect(Collectors.groupingBy(NotificacaoMLDTO::getUserId))//Agrupa as notificações em um Map onde a chave é o user_id e o valor é uma lista de notificações(List<NotificacaoMLDTO>) desse user_id.
-  .entrySet().stream()//Converte o conjunto de entradas do mapa (Map) da etapa anterior em um fluxo(stream) para poder iterar sobre cada grupo de notificações(cada par user_id -> lista de notificações).
-  .collect(Collectors.toMap(
+      .stream()// Inicia um fluxo (stream) das notificações.
+      .collect(Collectors.groupingBy(NotificacaoMLDTO::getUserId))//Agrupa as notificações em um Map onde a chave é o user_id e o valor é uma lista de notificações(List<NotificacaoMLDTO>) desse user_id.
+      .entrySet().stream()//Converte o conjunto de entradas do mapa (Map) da etapa anterior em um fluxo(stream) para poder iterar sobre cada grupo de notificações(cada par user_id -> lista de notificações).
+      .collect(Collectors.toMap(
     // Esse Coletor cria um novo Map onde:
     Map.Entry::getKey, // O (user_id) é a chave
     entry -> {
@@ -93,13 +94,13 @@ private final Logger logger = Logger.getLogger(FuncoesUtils.class.getName());
 //endregion
 
 //region Função Para Apagar As Notificações No Banco MySql.
-public List<Long> apagarNotificacoes(List<NotificacaoMLDTO> notificacoes) throws SQLException {
-  List<Long> idsNotificacoes = notificacoes
+public List<Long> pegarIDsDasNotificacoesDoUsuario(List<NotificacaoMLDTO> pArrNotificacoes) throws SQLException {
+  List<Long> vIDsNotificacoes = pArrNotificacoes
   .stream()
   .map(NotificacaoMLDTO::getId)
   .collect(Collectors.toList());
-  logger.info(" Apagando " + idsNotificacoes.size() + " Notificações !!");
-  return  idsNotificacoes;
+  logger.info(" Apagando " + vIDsNotificacoes.size() + " Notificações !!");
+  return  vIDsNotificacoes;
 }
 //endregion
 
