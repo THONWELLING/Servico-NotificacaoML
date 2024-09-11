@@ -99,7 +99,7 @@ public List<Long> pegarIDsDasNotificacoesDoUsuario(List<NotificacaoMLDTO> pArrNo
   .stream()
   .map(NotificacaoMLDTO::getId)
   .collect(Collectors.toList());
-  logger.info(" Apagando " + vIDsNotificacoes.size() + " Notificações !!");
+  logger.info(vIDsNotificacoes.size() + " Notificações. " + vIDsNotificacoes);
   return  vIDsNotificacoes;
 }
 //endregion

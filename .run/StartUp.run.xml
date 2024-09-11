@@ -1,0 +1,30 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="StartUp" type="Application" factoryName="Application" nameIsGenerated="true">
+    <option name="ALTERNATIVE_JRE_PATH" value="azul-17" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <envs>
+      <env name="DB_NAME" value="ambarxcall" />
+      <env name="DB_PASSWORD" value="Q7@W7=V9" />
+      <env name="DB_HOST" value="200.187.70.48" />
+      <env name="DB_PORT" value="3306" />
+      <env name="DB_USERNAME" value="notificacao" />
+      <env name="AMBARCLOUD" value="168.0.134.238" />
+      <env name="AMBARCLOUD2" value="200.187.69.101" />
+      <env name="AMBARCLOUD3" value="200.187.70.48" />
+      <env name="SENHA_SQLSERVER" value="Mariah17@3_thm" />
+      <env name="USUARIO_SQLSERVER" value="aabkmg" />
+    </envs>
+    <option name="MAIN_CLASS_NAME" value="com.ambarx.notificacoesML.StartUp" />
+    <module name="teste-api" />
+    <option name="VM_PARAMETERS" value="-Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="com.ambarx.notificacoesML.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

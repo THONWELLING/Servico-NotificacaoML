@@ -37,9 +37,9 @@ public class OperacoesNoBanco {
 	//region Função Deleta Todas As Notificações Do Seller Atual.
 	public void deletaNotificacoesDoSeller(List<NotificacaoMLDTO> pArrNotificacoesUsuarioAtual) {
     try {
-      itensRepository.deleteAllById(utils.pegarIDsDasNotificacoesDoUsuario(pArrNotificacoesUsuarioAtual));
+      itensRepository.deleteAllByIdInBatch(utils.pegarIDsDasNotificacoesDoUsuario(pArrNotificacoesUsuarioAtual));
     } catch (EmptyResultDataAccessException excecao) {
-      logger.log(Level.WARNING, "ERRO: Notificação Pode Já Ter Sido Deletada Da Tabela. Detalhes: " + excecao.getMessage());
+      logger.log(Level.WARNING, "ERRO: Notificação Pode Já Ter Sido Deletada Da Tabela. Detalhes: "     + excecao.getMessage());
     } catch (Exception e) {
       logger.log(Level.SEVERE,"ERRO: Ocorreu Um Erro Inesperado Ao Deletar as Notificações. Detalhes: " + e.getMessage());
     }
@@ -540,7 +540,7 @@ public class OperacoesNoBanco {
   //region Função Para DELETAR Dados De Um Produto Na Tabela ECOM_SKU_SEMVINCULO.
   public void deletaProdutoNaTabelaECOM_SKU_SEMVINCULO(Connection pConexao, String pSkuNotificacao) throws SQLException {
 
-    logger.info("Atualizando Dados do SKU Na Tabela ECOM_SKU_SEMVINCULO.");
+    logger.info("Deletando SKU Da Tabela ECOM_SKU_SEMVINCULO.");
 
     String Qry_AtualizaECOM_Sku = "DELETE FROM ECOM_SKU_SEMVINCULO WHERE SKU = ?";
 
@@ -549,13 +549,13 @@ public class OperacoesNoBanco {
 
       int linhasAfetadas = statement.executeUpdate();
       if (linhasAfetadas > 0) {
-        logger.info("SUCESSO: Dados DELETADOS Na Tabela ECOM_SKU_SEMVINCULO.");
+        logger.info("SUCESSO: SKU DELETADO Da Tabela ECOM_SKU_SEMVINCULO.");
       } else {
         logger.warning("Nenhum Dado Foi DELETADO Na Tabela ECOM_SKU_SEMVINCULO. Verificar Os Valores Fornecidos.");
       }
 
     } catch (SQLException excecao) {
-      logger.log(Level.SEVERE, "FALHA: Erro Ao DELETAR Dados Na Tabela ECOM_SKU_SEMVINCULO.");
+      logger.log(Level.SEVERE, "FALHA: Erro Ao DELETAR  O SKU {} Da Tabela ECOM_SKU_SEMVINCULO.", pSkuNotificacao);
       throw excecao;
     }
   }

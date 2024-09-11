@@ -12,7 +12,7 @@ import com.ambarx.notificacoesML.dto.notificacao.NotificacaoMLDTO;
 import com.ambarx.notificacoesML.httpclients.MercadoLivreHttpClient;
 import com.ambarx.notificacoesML.mapper.ModelMapperMapping;
 import com.ambarx.notificacoesML.models.NotificacaoMLItens;
-import com.ambarx.notificacoesML.models.NotificacaoUserProductFamiliesMLDTO;
+import com.ambarx.notificacoesML.models.NotificacaoUserProductFamiliesEntity;
 import com.ambarx.notificacoesML.models.SellerMercadoLivre;
 import com.ambarx.notificacoesML.repositories.AcessoApiCadClientesRepository;
 import com.ambarx.notificacoesML.repositories.NotificacaoMLItensRepository;
@@ -145,14 +145,12 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
                 if (operacoesNoBanco.ignorarGetSku(conexaoSQLServer)) {
                   logger.info("IgnorarGetSKU Definido Como (S). Apagar Notificações.");
                   operacoesNoBanco.deletaNotificacoesDoSeller(arrNotificacoesUsuarioAtual);
-                  logger.info("SUCESSO: Notificações Apagadas!!");
                 } //endregion
 
                 //region Se Origem Não Estiver Ativa No Banco Do Seller.
                 else if (! operacoesNoBanco.buscaParamPedido(conexaoSQLServer, userId)) {
                   logger.info("Parâmetro Pedido é  (N)  Apagar Notificações.");
                   operacoesNoBanco.deletaNotificacoesDoSeller(arrNotificacoesUsuarioAtual);
-                  logger.info("Notificações Apagadas Com Sucesso!!");
 
                 } //endregion
 
@@ -186,7 +184,6 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 												if (!objRespostaAPI.getShipping().getLogisticType().equalsIgnoreCase("fulfillment")) {
                           logger.info("Não É Full No GET De Items Mercado Livre.");
                           notificacaoMLItensRepository.deleteById(objNotificacao.getId());
-                          logger.info("Notificação Apagada Com Sucesso.");
                           continue;
                         }
 												//endregion
@@ -450,8 +447,9 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
                 } //endregion
 
               } //endregion
+
             } catch (SQLException excecao) {
-              logger.log(Level.SEVERE,"ERRO: Falha Ao Conectar No Banco Do User ID: " + userId, excecao);
+              logger.log(Level.SEVERE,"ERRO: Falha Ao Conectar No Banco Do User ID:  " + userId, excecao);
             }
             //endregion
 
@@ -484,7 +482,7 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 
     //region Buscando Todas As Notificações No Mysql.
     logger.info("Buscando Todas As Notificações De User Products Families Do Mercado Livre!!!");
-    List<NotificacaoUserProductFamiliesMLDTO> vTodasNotificacoesUserProductsFamilies = notificacaoMLUserProductsFamiliesRepository.findAll();
+    List<NotificacaoUserProductFamiliesEntity> vTodasNotificacoesUserProductsFamilies = notificacaoMLUserProductsFamiliesRepository.findAll();
     //endregion
 
     //region Transforma As Notificações Em DTO.

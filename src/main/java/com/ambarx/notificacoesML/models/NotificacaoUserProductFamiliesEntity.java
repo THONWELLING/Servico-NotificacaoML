@@ -18,7 +18,7 @@ import java.util.Objects;
 @NoArgsConstructor
 @Setter
 @Table(name = "notificacao_mercadolivre_user_products_families")
-public class NotificacaoUserProductFamiliesMLDTO implements Serializable {
+public class NotificacaoUserProductFamiliesEntity implements Serializable {
   @Id
   @Column(name = "id")
   private Long   id;
@@ -38,7 +38,7 @@ public class NotificacaoUserProductFamiliesMLDTO implements Serializable {
 
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    NotificacaoUserProductFamiliesMLDTO that = (NotificacaoUserProductFamiliesMLDTO) o;
+    NotificacaoUserProductFamiliesEntity that = (NotificacaoUserProductFamiliesEntity) o;
     return Objects.equals(id, that.id) && Objects.equals(userId, that.userId) && Objects.equals(resource, that.resource) && Objects.equals(topic, that.topic) && Objects.equals(received, that.received) && Objects.equals(sent, that.sent);
   }
 
