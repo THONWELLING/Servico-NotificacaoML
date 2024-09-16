@@ -13,8 +13,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Configuration
-public class ConexaoConfig {
-  private static final Logger logger = Logger.getLogger(ConexaoConfig.class.getName());
+public class DataSourceConfig {
+  private static final Logger logger = Logger.getLogger(DataSourceConfig.class.getName());
   private static final List<String> PROTOCOLOS_TLS = Arrays.asList("TLSv1.3", "TLSv1.2", "TLSv1.1", "TLSv1");
 
   public static Connection conectar(ConexaoDTO cliente) throws SQLException {
