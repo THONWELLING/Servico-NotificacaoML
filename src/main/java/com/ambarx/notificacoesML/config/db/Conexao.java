@@ -1,25 +1,35 @@
 package com.ambarx.notificacoesML.config.db;
 
+import com.ambarx.notificacoesML.config.logger.LoggerConfig;
 import com.ambarx.notificacoesML.dto.conexao.ConexaoDTO;
-import org.springframework.context.annotation.Configuration;
+import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Component;
 
 import javax.net.ssl.SSLContext;
+import javax.sql.DataSource;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-@Configuration
-public class ConexaoConfig {
-  private static final Logger logger = Logger.getLogger(ConexaoConfig.class.getName());
-  private static final List<String> PROTOCOLOS_TLS = Arrays.asList("TLSv1.3", "TLSv1.2", "TLSv1.1", "TLSv1");
+@AllArgsConstructor
+@Component
+public class Conexao {
+  private static final Logger loggerRobot   = LoggerConfig.getLoggerRobot();
+  private static final Logger logger        = Logger.getLogger(Conexao.class.getName());
+  private final List<String> PROTOCOLOS_TLS = Arrays.asList("TLSv1.3", "TLSv1.2", "TLSv1.1", "TLSv1");
+  private final ConfigDataSourceDinamico dataSourceDinamico;
 
-  public static Connection conectar(ConexaoDTO cliente) throws SQLException {
+  public Connection conectar(ConexaoDTO cliente) throws SQLException, UnknownHostException {
     String port   = "1433";
     String server = System.getenv(cliente.getServidor());
+
+    InetAddress objEnderecoIP = InetAddress.getByName(server); //Pega o IP Baseado No DNS
+    String        vEnderecoIP = objEnderecoIP.getHostAddress();
 
     if(server  == null) {
       server = cliente.getServidor();
@@ -38,49 +48,41 @@ public class ConexaoConfig {
 
     if("ativo".equalsIgnoreCase(cliente.getStatusCliente()) || "prospect".equalsIgnoreCase(cliente.getStatusCliente()) && "remoto".equalsIgnoreCase(cliente.getTipoAcesso())) {
 
-      logger.info("Conectando Ao Banco" + database);
+      logger.info("Conectando Ao Banco Do Seller. " + cliente.getIdentificadorCliente());
       for (String vProtocoloTLS : PROTOCOLOS_TLS) {
-				try {
+        try {
           SSLContext contextoSSL = SSLContext.getInstance(vProtocoloTLS);
           contextoSSL.init(null, null, null);
           SSLContext.setDefault(contextoSSL);
 
-          String vUrlConexao = "jdbc:sqlserver://" + server + ":" + port + ";databaseName=" + database + ";encrypt=true;trustServerCertificate=true;sslProtocol="  + vProtocoloTLS + ";";
-          return DriverManager.getConnection(vUrlConexao, usuarioSql, senhaSql);
+          String vUrlConexao = "eletropartes".equalsIgnoreCase(server) ?
+            "jdbc:sqlserver://" + vEnderecoIP + ":" + port + ";databaseName=" + database + ";encrypt=true;trustServerCertificate=true;sslProtocol=" + vProtocoloTLS + ";"
+          :
+            "jdbc:sqlserver://" + server + ":" + port + ";databaseName=" + database + ";encrypt=true;trustServerCertificate=true;sslProtocol=" + vProtocoloTLS + ";";
 
-				} catch (Exception e) {
-					logger.log(Level.INFO, "FALHA Ao Conectar Usando O Protocolo " + vProtocoloTLS);
-				}
-			}
-      logger.log(Level.SEVERE, "Nenhum Protocolo TLS Foi Capaz de Estabelecer Conexão.");
+          DataSource dataSource = dataSourceDinamico.createDataSource(vUrlConexao, usuarioSql, senhaSql);
+          return dataSource.getConnection();
+
+        } catch (Exception e) {
+          loggerRobot.warning("\n FALHA Ao Conectar Ao Banco: " + database + " \nSeller: -> " + cliente.getIdentificadorCliente() + " Usando O Protocolo -> "
+                                  + vProtocoloTLS + ":\n -> " + e.getMessage());
+        }
+      }
+      loggerRobot.severe("Nenhum Protocolo TLS Foi Capaz de Estabelecer Conexão com o Banco Do Seller. " + cliente.getIdentificadorCliente()
+                            + " Banco: -> " + cliente.getBanco());
     }
     return null;
+
   }
 
-  public static void fecharConexao(Connection conexao) throws SQLException {
+  public void fecharConexao(Connection conexao) throws SQLException {
     if (conexao != null) {
       try {
         conexao.close();
       } catch (SQLException e) {
-        logger.log(Level.SEVERE,"Erro Ao Fechar Conexão", e);
+        loggerRobot.log(Level.SEVERE, "Erro Ao Fechar Conexão", e.getMessage());
+        throw e;
       }
     }
   }
 }
-
-
-/*
-* if("ativo".equalsIgnoreCase(cliente.getStatusCliente()) || "prospect".equalsIgnoreCase(cliente.getStatusCliente()) && "remoto".equalsIgnoreCase(cliente.getTipoAcesso())) {
-
-      //System.setProperty("jdk.tls.client.protocols", "TLSv1,TLSv1.1,TLSv1.2,TLSv1.3");
-      logger.info("Conectando Ao Banco" + database);
-      String urlConexao = "";
-      if (database.equalsIgnoreCase("Ambar70") || database.equalsIgnoreCase("BancoAmbarTRP")) {
-        urlConexao = "jdbc:sqlserver://" + server + ":" + port + ";databaseName=" + database + ";encrypt=false;trustServerCertificate=true;sslProtocol=TLSv1;";
-      } else {
-        urlConexao = "jdbc:sqlserver://" + server + ":" + port + ";databaseName=" + database + ";encrypt=true;trustServerCertificate=true";
-      }
-      return DriverManager.getConnection(urlConexao, usuarioSql, senhaSql);
-    }
-    return null;
-* */

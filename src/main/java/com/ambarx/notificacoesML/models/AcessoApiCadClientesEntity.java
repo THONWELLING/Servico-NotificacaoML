@@ -17,7 +17,7 @@ import java.util.Objects;
 @NoArgsConstructor
 @Setter
 @Table(name = "acessoapi_cadclientes")
-public class AcessoApiCadClientes {
+public class AcessoApiCadClientesEntity {
 
     @Column(name = "autoid")
     private Integer id;
@@ -32,7 +32,7 @@ public class AcessoApiCadClientes {
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (!(o instanceof AcessoApiCadClientes that)) return false;
+    if (!(o instanceof AcessoApiCadClientesEntity that)) return false;
     return Objects.equals(getId(), that.getId()) && Objects.equals(getIdentificadorCliente(), that.getIdentificadorCliente()) && Objects.equals(getServidor(), that.getServidor()) && Objects.equals(getBanco(), that.getBanco());
   }
 

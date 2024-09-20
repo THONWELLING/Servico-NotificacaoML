@@ -1,5 +1,6 @@
 package com.ambarx.notificacoesML.utils;
 
+import com.ambarx.notificacoesML.config.logger.LoggerConfig;
 import com.ambarx.notificacoesML.dto.notificacao.NotificacaoMLDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -14,13 +15,13 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @Service
 public class FuncoesUtils {
-private final Logger logger = Logger.getLogger(FuncoesUtils.class.getName());
+private static final Logger loggerRobot = LoggerConfig.getLoggerRobot();
+private static final Logger logger      = Logger.getLogger(FuncoesUtils.class.getName());
 
 //region Função Para Agrupar As Notificações De Itens e Filtrar Para Evitar Requisições Desnecessárias
   /**
@@ -58,56 +59,58 @@ private final Logger logger = Logger.getLogger(FuncoesUtils.class.getName());
 
   public Map<String, List<NotificacaoMLDTO>> agruparEFiltrarNotificacoes(List<NotificacaoMLDTO> pNotificacoesML) {
 
-  //Converte strings(ISO 8601) da tag received das em objetos LocalDateTime. Isso facilita a comparação de datas que faremos para filtrar as notificações.
-  DateTimeFormatter formataData = DateTimeFormatter.ISO_DATE_TIME;
+    //Converte strings(ISO 8601) da tag received das em objetos LocalDateTime. Isso facilita a comparação de datas que faremos para filtrar as notificações.
+    DateTimeFormatter formataData = DateTimeFormatter.ISO_DATE_TIME;
 
-  // Agrupando Notificações Por User_Id
-  return pNotificacoesML
-      .stream()// Inicia um fluxo (stream) das notificações.
-      .collect(Collectors.groupingBy(NotificacaoMLDTO::getUserId))//Agrupa as notificações em um Map onde a chave é o user_id e o valor é uma lista de notificações(List<NotificacaoMLDTO>) desse user_id.
-      .entrySet().stream()//Converte o conjunto de entradas do mapa (Map) da etapa anterior em um fluxo(stream) para poder iterar sobre cada grupo de notificações(cada par user_id -> lista de notificações).
-      .collect(Collectors.toMap(
-    // Esse Coletor cria um novo Map onde:
-    Map.Entry::getKey, // O (user_id) é a chave
-    entry -> {
-      List<NotificacaoMLDTO> vNotificacoesDoUsuario = entry.getValue(); //Obtém a lista de notificações associadas ao user_id atual.
+   // Agrupando Notificações Por User_Id
+     return pNotificacoesML
+        .stream()// Inicia um fluxo (stream) das notificações.
+        .collect(Collectors.groupingBy(NotificacaoMLDTO::getUserId))//Agrupa as notificações em um Map onde a chave é o user_id e o valor é uma lista de notificações(List<NotificacaoMLDTO>) desse user_id.
+        .entrySet().stream()//Converte o conjunto de entradas do mapa (Map) da etapa anterior em um fluxo(stream) para poder iterar sobre cada grupo de notificações(cada par user_id -> lista de notificações).
+        .map(entrada -> {
+          List<NotificacaoMLDTO> vNotificacoesDoUsuario = entrada.getValue(); //Obtém a lista de notificações associadas ao user_id atual.
 
-      //Ordenar por data de recebimento
-      vNotificacoesDoUsuario.sort(Comparator.comparing(NotificacaoMLDTO::getReceived));//Ordena as notificações dentro desse grupo em ordem crescente, com base na data de recebimento (received).
+          //Ordenar por data de recebimento
+          vNotificacoesDoUsuario.sort(Comparator.comparing(NotificacaoMLDTO::getReceived));//Ordena as notificações dentro desse grupo em ordem crescente, com base na data de recebimento (received).
 
-      List<NotificacaoMLDTO> vNotificacoesFiltradas = new ArrayList<>();
-      Map<String, LocalDateTime> vUltimasNotificacoes = new HashMap<>(); //Armazena a Ultima Notificação Por Resource.
+          List<NotificacaoMLDTO> vNotificacoesFiltradas   = new ArrayList<>();
+          Map<String, LocalDateTime> vUltimasNotificacoes = new HashMap<>(); //Armazena a Ultima Notificação Por Resource.
 
-      for (NotificacaoMLDTO vNotificacao : vNotificacoesDoUsuario) {
-        LocalDateTime vDataRecebida = LocalDateTime.parse(vNotificacao.getReceived(), formataData);
-        String vResource = vNotificacao.getResource();
-        if (! vUltimasNotificacoes.containsKey(vResource) || Duration.between(vUltimasNotificacoes.get(vResource), vDataRecebida).toMinutes() >= 2) {
-          //Adiciona a Notifgicação a Lista Filtrada Se Não Houver Repetição Recente
-          vNotificacoesFiltradas.add(vNotificacao);
-          vUltimasNotificacoes.put(vResource, vDataRecebida); //Atualiza a Última Notificação Desse Resource
-        }
-      }
-      return vNotificacoesFiltradas;
-    }
-  ));
-}
+          for (NotificacaoMLDTO vNotificacao : vNotificacoesDoUsuario) {
+            LocalDateTime vDataRecebida = LocalDateTime.parse(vNotificacao.getReceived(), formataData);
+            String vResource = vNotificacao.getResource();
+            if (! vUltimasNotificacoes.containsKey(vResource) || Duration.between(vUltimasNotificacoes.get(vResource), vDataRecebida).toMinutes() >= 5) {
+              //Adiciona a Notifgicação a Lista Filtrada Se Não Houver Repetição Recente
+              vNotificacoesFiltradas.add(vNotificacao);
+              vUltimasNotificacoes.put(vResource, vDataRecebida); //Atualiza a Última Notificação Desse Resource
+            }
+          }
+          return Map.entry(entrada.getKey(), vNotificacoesFiltradas); //// Retorna a Chave (user_id) e a Lista Filtrada Como Uma Entrada
+        })
+        .sorted((entrada1, entrada2) -> Integer.compare(entrada2.getValue().size(), entrada1.getValue().size()))
+        .collect(Collectors.toMap(
+            Map.Entry::getKey,
+            Map.Entry::getValue,
+            (e1, e2) -> e1,
+            LinkedHashMap::new)
+    );
+  }
+
 //endregion
 
-//region Função Para Apagar As Notificações No Banco MySql.
+//region Função Para Pegar IDs Das Notificações No Banco MySql.
 public List<Long> pegarIDsDasNotificacoesDoUsuario(List<NotificacaoMLDTO> pArrNotificacoes) throws SQLException {
-  List<Long> vIDsNotificacoes = pArrNotificacoes
+	return pArrNotificacoes
   .stream()
   .map(NotificacaoMLDTO::getId)
   .collect(Collectors.toList());
-  logger.info(vIDsNotificacoes.size() + " Notificações. " + vIDsNotificacoes);
-  return  vIDsNotificacoes;
 }
 //endregion
 
 //region Função Para Extrair o SKU Da Tag Resource da Notificação.
 public String extrairSkuMLDasNotificacoes(String resource) {
   if (resource != null && resource.startsWith("/items/")) {
-    logger.info("Extraindo o SKU Da Notificação");
+    logger.info("Extraindo o SKU Do Resource Da Notificação.");
     return resource.substring("/items/".length());
   }
   return null;
@@ -175,10 +178,19 @@ public void gravaJSON(Object pObjeto, String pCaminhoArquivo) throws IOException
     vMapper.enable(SerializationFeature.INDENT_OUTPUT);
     vMapper.writeValue(gravaJson, pObjeto);
   } catch (Exception excecaoGravaJson) {
-    logger.log(Level.SEVERE, "Erro Ao Gravar JSON Na Temp.");
+    loggerRobot.severe("Erro Ao Gravar JSON Na Pasta Temp. -> " + excecaoGravaJson.getMessage());
     throw excecaoGravaJson;
   }
 }
 //endregion
+
+//region Função Para Limitar Quantidade De Caracteres
+public String limitarQuantCatacteres(String pDadoParaLimitar, int pQuantMaxima) {
+  if (pDadoParaLimitar == null) {
+    return null;
+  }
+  return pDadoParaLimitar.length() > pQuantMaxima ? pDadoParaLimitar.substring(0, pQuantMaxima) : pDadoParaLimitar;
+}
+	//endregion
 
 }

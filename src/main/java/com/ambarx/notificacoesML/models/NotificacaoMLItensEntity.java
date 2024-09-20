@@ -18,7 +18,7 @@ import java.util.Objects;
 @NoArgsConstructor
 @Setter
 @Table(name = "notificacao_mercadolivre_items")
-public class NotificacaoMLItens implements Serializable {
+public class NotificacaoMLItensEntity implements Serializable {
   @Id
   @Column(name = "id")
   private Long   id;
@@ -36,7 +36,7 @@ public class NotificacaoMLItens implements Serializable {
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (!(o instanceof NotificacaoMLItens that)) return false;
+    if (!(o instanceof NotificacaoMLItensEntity that)) return false;
     return Objects.equals(getId(), that.getId()) && Objects.equals(getUserId(), that.getUserId()) && Objects.equals(getResource(), that.getResource()) && Objects.equals(getTopic(), that.getTopic()) && Objects.equals(getReceived(), that.getReceived()) && Objects.equals(getSent(), that.getSent());
   }
 

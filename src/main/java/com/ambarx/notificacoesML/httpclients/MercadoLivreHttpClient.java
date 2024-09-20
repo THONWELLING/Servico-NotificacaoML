@@ -1,42 +1,41 @@
 package com.ambarx.notificacoesML.httpclients;
 
+import com.ambarx.notificacoesML.config.logger.LoggerConfig;
+import lombok.AllArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
+@AllArgsConstructor
 public class MercadoLivreHttpClient {
   private final RestTemplate restTemplate;
-  private final Logger logger = Logger.getLogger(MercadoLivreHttpClient.class.getName());
-  public MercadoLivreHttpClient(RestTemplate restTemplate) { this.restTemplate = restTemplate; }
+  private static final Logger loggerRobot = LoggerConfig.getLoggerRobot();
 
-  public <T> T fazerRequisicao (String urlDaRequisicao, String tokenSeller, Class<T> tipoDoRetornoEsperado) throws IOException {
+  public <T> T fazerRequisicao (String pUrlDaRequisicao, String pTokenSeller,  String pIdentificadorSeller,Class<T> tipoDoRetornoEsperado) throws IOException {
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
     headers.add("Accept", "application/json");
-    headers.setBearerAuth(tokenSeller);
+    headers.setBearerAuth(pTokenSeller);
 
     HttpEntity<String> requestEntity = new HttpEntity<>(headers);
 
     try {
       ResponseEntity<T> responseEntity = restTemplate.exchange(
-          URI.create(urlDaRequisicao),
+          URI.create(pUrlDaRequisicao),
           HttpMethod.GET,
           requestEntity,
           tipoDoRetornoEsperado
       );
 
-      if (responseEntity.getStatusCode() == HttpStatus.OK) {
-        return responseEntity.getBody();
-      } else {
-        logger.log(Level.WARNING,"ERRO: Requisição, Status Code :  " + responseEntity.getStatusCode());
-      }
+      if (responseEntity.getStatusCode() == HttpStatus.OK) { return responseEntity.getBody();
+      } else { loggerRobot.warning("FALHA: Requisição, Status Code: -> " + responseEntity.getStatusCode());}
+
     } catch (RestClientException excecao) {
-      logger.log(Level.SEVERE, "FALHA: Erro Ao Fazer Requisição Http " + excecao.getMessage());
+      loggerRobot.severe("FALHA: Erro Ao Fazer Requisição Http. ->\n Seller: -> " + pIdentificadorSeller + "\nMensagem: -> " + excecao.getMessage());
     }
     return null;
   }

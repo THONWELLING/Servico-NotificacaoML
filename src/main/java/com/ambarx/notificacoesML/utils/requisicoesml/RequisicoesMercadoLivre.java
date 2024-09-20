@@ -1,11 +1,11 @@
 package com.ambarx.notificacoesML.utils.requisicoesml;
 
+import com.ambarx.notificacoesML.config.logger.LoggerConfig;
 import com.ambarx.notificacoesML.dto.comissao.ComissaoDTO;
 import com.ambarx.notificacoesML.dto.frete.FreteDTO;
 import com.ambarx.notificacoesML.dto.item.ItemDTO;
 import com.ambarx.notificacoesML.httpclients.MercadoLivreHttpClient;
 import com.ambarx.notificacoesML.mapper.ModelMapperMapping;
-import com.ambarx.notificacoesML.utils.FuncoesUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -22,54 +22,59 @@ public class RequisicoesMercadoLivre {
  *
  * @Author Thonwelling*/
 
+private static final Logger loggerRobot = LoggerConfig.getLoggerRobot();
 private static final Logger logger = Logger.getLogger(RequisicoesMercadoLivre.class.getName());
 private static MercadoLivreHttpClient mercadoLivreHttpClient = null;
 
-@Autowired
-private static final FuncoesUtils utils = new FuncoesUtils();
-
-@Autowired
+	@Autowired
 public RequisicoesMercadoLivre(RestTemplate restTemplate) {
   mercadoLivreHttpClient = new MercadoLivreHttpClient(restTemplate);
 }
 
 //region Função Para Fazer a Requisição De Items.
-public static ItemDTO fazerRequisicaoGetItem(String skuML, String tokenSeller) throws IOException {
-  String urlGetItems = "https://api.mercadolibre.com/items/" + skuML + "?include_attributes=all";
-  logger.log(Level.INFO, "Fazendo GET Do SKU No Mercado Livre!!!");
-  ItemDTO respostaAPI = ModelMapperMapping.parseObject(mercadoLivreHttpClient.fazerRequisicao(urlGetItems, tokenSeller, ItemDTO.class), ItemDTO.class);
-
-  utils.gravaJSON(respostaAPI, "C:/Ambar/Temp/RetornoGetItemMl.txt");
-  return respostaAPI;
+public static ItemDTO fazerRequisicaoGetItem(String pSkuML, String pTokenSeller, String pIdentificadorSeller) throws IOException {
+  String urlGetItems = "https://api.mercadolibre.com/items/" + pSkuML + "?include_attributes=all";
+	try {
+  	logger.log(Level.INFO, "Fazendo GET De Item No Mercado Livre.");
+		return ModelMapperMapping.parseObject(mercadoLivreHttpClient.fazerRequisicao(urlGetItems, pTokenSeller, pIdentificadorSeller, ItemDTO.class), ItemDTO.class);
+		/*utils.gravaJSON(respostaAPI, "C:/Ambar/Temp/RetornoGetItemMl.txt");*/
+	} catch (IOException excecaoMlItens) {
+		loggerRobot.severe("FALHA: Erro Ao Buscar Dados Na API De Itens. -> " + excecaoMlItens.getMessage());
+    return null;
+	}
 }
 //endregion
 
 //region Função Para Fazer a Requisição De Comissão.
-public static double fazerRequisicaoGetComissaoML(String tipoDeAnuncio, double preco, String categoria, String tokenSeller) throws IOException {
+public static double fazerRequisicaoGetComissaoML(String pTipoDeAnuncio, double pPreco, String pCategoria, String pTokenSeller, String pIdentificadorSeller) throws IOException {
   DecimalFormatSymbols symbols = new DecimalFormatSymbols();
   symbols.setDecimalSeparator('.');
   DecimalFormat formatoValor   = new DecimalFormat("0.00", symbols);
-  String        urlGetComissao = "https://api.mercadolibre.com/sites/MLB/listing_prices/" + tipoDeAnuncio + "?price=" + formatoValor.format(preco) + "&category_id=" + categoria;
+  String        urlGetComissao = "https://api.mercadolibre.com/sites/MLB/listing_prices/" + pTipoDeAnuncio + "?price=" + formatoValor.format(pPreco) + "&category_id=" + pCategoria;
   logger.log(Level.INFO, "Fazendo GET Da Comissão No Mercado Livre!!!");
-  ComissaoDTO  respostaAPIComissao = ModelMapperMapping.parseObject(mercadoLivreHttpClient.fazerRequisicao(urlGetComissao, tokenSeller, ComissaoDTO.class), ComissaoDTO.class);
-  utils.gravaJSON(respostaAPIComissao, "C:/Ambar/Temp/RetornoGetComissaoMl.txt");
+	try {
+    ComissaoDTO respostaAPIComissao = ModelMapperMapping.parseObject(mercadoLivreHttpClient.fazerRequisicao(urlGetComissao, pTokenSeller, pIdentificadorSeller, ComissaoDTO.class), ComissaoDTO.class);
 
-  // Extrair valor da comissão
-  return respostaAPIComissao.getSaleFeeDetails().getPercentageFee();
+    // Extrair valor da comissão
+    return respostaAPIComissao != null ? respostaAPIComissao.getSaleFeeDetails().getPercentageFee() : 0.00;
+  } catch (IOException excecaoComissao) {
+		loggerRobot.severe("FALHA: Erro Ao Buscar Dados Na API De Comissão.\nSeller: -> " +pIdentificadorSeller + "\nMensagem: -> " + excecaoComissao.getMessage());
+    return 0.00;
+	}
+
 }
 //endregion
 
 //region Função Para Fazer a Requisição De Frete.
-public static double fazerRequisicaoGetFrete(String userId, String skuML, String tokenSeller) throws IOException {
-  String urlFrete = "https://api.mercadolibre.com/users/" + userId + "/shipping_options/free?item_id=" + skuML;
+public static double fazerRequisicaoGetFrete(String pUserId, String pSkuML, String pTokenSeller, String pIdentificadorSeller) throws IOException {
+  String urlFrete = "https://api.mercadolibre.com/users/" + pUserId + "/shipping_options/free?item_id=" + pSkuML;
   logger.log(Level.INFO, "Fazendo GET Do Frete No Mercado Livre!!!");
 
   try {
-    FreteDTO respostaAPIFrete = ModelMapperMapping.parseObject(mercadoLivreHttpClient.fazerRequisicao(urlFrete, tokenSeller, FreteDTO.class), FreteDTO.class);
-    utils.gravaJSON(respostaAPIFrete, "C:/Ambar/Temp/RetornoGetFreteMl.txt");
+    FreteDTO respostaAPIFrete = ModelMapperMapping.parseObject(mercadoLivreHttpClient.fazerRequisicao(urlFrete, pTokenSeller, pIdentificadorSeller, FreteDTO.class), FreteDTO.class);
     return respostaAPIFrete != null ? respostaAPIFrete.getCoverage().getAllCountry().getListCost() : 0.00;
   } catch (Exception excecaoFrete) {
-    logger.log(Level.SEVERE, "Erro Ao Buscar Dados Na API De FreTe.");
+    loggerRobot.severe("FALHA: Erro Ao Buscar Dados Na API De FreTe. \nSeller: -> " + pIdentificadorSeller + "\nMensagem: -> " + excecaoFrete.getMessage());
     return 0.00;
   }
 }

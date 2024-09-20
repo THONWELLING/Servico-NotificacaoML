@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.ambarx</groupId>
-	<artifactId>teste-api</artifactId>
+	<artifactId>servico-notificacao-ml</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>Serviço Notificação</name>
+	<name>Servico_Notificação_ML</name>
 	<description>Serviço Criado  Para Lidar Com Notificações Recebidas Do Mercado Livres</description>
 	<properties>
 		<java.version>       17   		  </java.version>
@@ -20,7 +20,7 @@
 		<mapper.version>     3.2.0		  </mapper.version>
 		<validation.version> 3.0.4		  </validation.version>
 		<dotEnv.version>	 5.2.2		  </dotEnv.version>
-		<sqlServer.version>  12.4.0.jre11 </sqlServer.version>
+		<sqlServer.version>  12.8.1.jre11 </sqlServer.version>
 		<xml.version>		 2.14.2		  </xml.version>
 	</properties>
 	<dependencies>
@@ -46,11 +46,6 @@
         <!-- Dependências de Terceiros -->
 
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-validation</artifactId>
-            <version>${validation.version}</version>
-        </dependency>
-		<dependency>
 			<groupId>io.github.cdimascio</groupId>
 			<artifactId>java-dotenv</artifactId>
 			<version>${dotEnv.version}</version>
@@ -69,12 +64,6 @@
             <version>${mysql.version}</version>
             <scope>runtime</scope>
 		</dependency>
-		<dependency>
-			<!--	Dependência para content Negotiation	-->
-			<groupId>com.fasterxml.jackson.dataformat</groupId>
-			<artifactId>jackson-dataformat-xml</artifactId>
-            <version>${xml.version}</version>
-        </dependency>
 
 		<dependency>
 			<groupId>org.modelmapper.extensions</groupId>

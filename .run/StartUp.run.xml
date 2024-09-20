@@ -15,7 +15,7 @@
       <env name="USUARIO_SQLSERVER" value="aabkmg" />
     </envs>
     <option name="MAIN_CLASS_NAME" value="com.ambarx.notificacoesML.StartUp" />
-    <module name="teste-api" />
+    <module name="servico-notificacao-ml" />
     <option name="VM_PARAMETERS" value="-Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2" />
     <extension name="coverage">
       <pattern>
