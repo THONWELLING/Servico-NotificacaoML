@@ -78,7 +78,7 @@ public class OperacoesNoBanco {
   //region Função Para Buscar o Valor Do Parâmetro PEDIDO Na ECOM_ORIGEM ("S" Significa Origem Ativa).
   public boolean buscaParamPedido(Connection pConexao, String pUserId) throws SQLException {
     logger.info("Buscando Parâmetro PEDIDO No Banco Do Seller.");
-    String Qry_BuscaPedido = "SELECT PEDIDO FROM ECOM_ORIGEM WHERE ORIGEM_ID = (SELECT TOP 1 ORIGEM FROM ECOM_METODOS WHERE CANAL = ?)";
+    String Qry_BuscaPedido = "SELECT PEDIDO FROM ECOM_ORIGEM WHERE ORIGEM_ID = (SELECT ORIGEM FROM ECOM_METODOS WHERE CANAL = ?)";
     try (PreparedStatement statement = pConexao.prepareStatement(Qry_BuscaPedido)){
       statement.setString(1, pUserId);
       try(ResultSet resultSet = statement.executeQuery()) {
