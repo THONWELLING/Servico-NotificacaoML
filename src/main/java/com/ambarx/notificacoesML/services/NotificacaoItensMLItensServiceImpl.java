@@ -73,7 +73,7 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 			processaNotificacoesMLItems(notificacaoMLItensRepository);
 		} catch (NotificacaoMLException e) {
       loggerRobot.severe("Erro Na Execução Da Tarefa ML Itens. -> " + e + " \nUserId: " + e.getUserId() + " \nIdentificador Do Cliente: " + e.getVIdentificadorCliente());
-      logger.log(Level.SEVERE, "Erro Na Execução Da Tarefa ML Itens. -> " + e + " \nUserId: " + e.getUserId() + " \nIdentificador Do Cliente: " + e.getVIdentificadorCliente());
+      logger.log(Level.SEVERE, "Stack Trace Detalhado. -> " , e);
 		}
 	}
 
@@ -239,7 +239,7 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 															//region Pegando o Seller_sku do Array de Attributos Produto Simples.
 															for (AtributoDTO atributo : objRespostaAPI.getAttributes()) {
 																if ("SELLER_SKU".equalsIgnoreCase(atributo.getId())) {
-																	vSellerSkuGET = atributo.getValueName();
+																	vSellerSkuGET = !atributo.getValueName().isEmpty() || atributo.getValueName().isBlank() ? utils.limitarQuantCatacteres(atributo.getValueName().trim(), 30) : atributo.getValueName();
 																	break;
 																}
 															}
@@ -340,7 +340,9 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 																				break;
 																			}
 																			if ("SELLER_SKU".equalsIgnoreCase(atributoVariacao.getId())) {
-																				vSellerSKUVariac = atributoVariacao.getValueName();
+																				vSellerSKUVariac = !atributoVariacao.getValueName().isEmpty()|| !atributoVariacao.getValueName().isBlank()  ?
+																														utils.limitarQuantCatacteres(atributoVariacao.getValueName().trim(), 50)   :
+																														atributoVariacao.getValueName();
 																				break;
 																			}
 																		}

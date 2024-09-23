@@ -116,8 +116,6 @@ public class OperacoesNoBanco {
           //Convertendo para LocalDateTime
           LocalDateTime vTokenExpira = vExpiraTimestamp.toInstant().atZone(ZoneId.of("America/New_York")).withZoneSameInstant(ZoneId.of("America/Sao_Paulo")) .toLocalDateTime();
 
-          logger.info("SUCESSO: Token  Encontrado.");
-          logger.info("SUCESSO: Origem Encontrada.");
           return new DadosEcomMetodosDTO(vTokenTemp, vOrigem, vTokenExpira);
         }
       }
@@ -143,9 +141,9 @@ public class OperacoesNoBanco {
 
           //region Pega As Informações Do Banco e Guarda Nas Variáveis
           int    vCodID      = resultSet.getInt("MATERIAL_ID");
-          String vSkuNoBanco = resultSet.getString("SKU").trim();
-          String vEstaAtivo  = resultSet.getString("ATIVO").trim();
-          String vEFull      = resultSet.getString("FULFILLMENT").trim();
+          String vSkuNoBanco = !resultSet.getString("SKU").isEmpty()         || !resultSet.getString("SKU").isBlank()         ? resultSet.getString("SKU").trim()         : resultSet.getString("SKU");
+          String vEstaAtivo  = !resultSet.getString("ATIVO").isEmpty()       || !resultSet.getString("ATIVO").isBlank()       ? resultSet.getString("ATIVO").trim()       : resultSet.getString("ATIVO");
+          String vEFull      = !resultSet.getString("FULFILLMENT").isEmpty() || !resultSet.getString("FULFILLMENT").isBlank() ? resultSet.getString("FULFILLMENT").trim() : resultSet.getString("FULFILLMENT");
           logger.info("SKU Encontrado No Banco.");
           //endregion
 
@@ -184,9 +182,9 @@ public class OperacoesNoBanco {
 
           //region Pega As Informações Do Banco e Guarda Nas Variáveis
           int    vCodID      = resultSet.getInt("MATERIAL_ID");
-          String vSkuNoBanco = resultSet.getString("SKU").trim();
-          String vEstaAtivo  = resultSet.getString("ATIVO").trim();
-          String vEFull      = resultSet.getString("FULFILLMENT").trim();
+          String vSkuNoBanco = !resultSet.getString("SKU").isEmpty()         || !resultSet.getString("SKU").isBlank()         ? resultSet.getString("SKU").trim()         : resultSet.getString("SKU");
+          String vEstaAtivo  = !resultSet.getString("ATIVO").isEmpty()       || !resultSet.getString("ATIVO").isBlank()       ? resultSet.getString("ATIVO").trim()       : resultSet.getString("ATIVO");
+          String vEFull      = !resultSet.getString("FULFILLMENT").isEmpty() || !resultSet.getString("FULFILLMENT").isBlank() ? resultSet.getString("FULFILLMENT").trim() : resultSet.getString("FULFILLMENT");
           logger.info("SKU Encontrado No Banco");
           //endregion
 
