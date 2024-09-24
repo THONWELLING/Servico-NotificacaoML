@@ -9,17 +9,17 @@ import java.util.logging.*;
 
 public class LoggerConfig {
 	@Getter
-	private static final Logger loggerRobot  				= Logger.getLogger("LoggerORobot");
-	private static String vUltimaMensagemLog 				= ""; //Armazena Último Log Gerado
-	private static final String CAMINHO_ARQUIVO_LOG = "C:/Ambar/Temp/notificacaoMLLogs.log";
+	private static final Logger loggerRobot 				 = Logger.getLogger("LoggerORobot");
+	private static String ultimaMensagemSemTimestamp = ""; // Armazena a última mensagem sem timestamp
+	private static final String CAMINHO_ARQUIVO_LOG  = "C:/Ambar/Temp/notificacaoMLLogs.log";
 
 	static {
 		try {
 			FileHandler fileHandler = new FileHandler(CAMINHO_ARQUIVO_LOG, true);
 			fileHandler.setFormatter(new FormatadorDeLog());
-			fileHandler.setLevel(Level.INFO); //Level Mínimo Que Será Capturado
+			fileHandler.setLevel(Level.INFO); // Define o nível mínimo que será capturado
 			loggerRobot.addHandler(fileHandler);
-			loggerRobot.setUseParentHandlers(false); //Para Evitar Dupliacação No Console
+			loggerRobot.setUseParentHandlers(false); // Para evitar duplicação no console
 		} catch (IOException e) {
 			loggerRobot.severe("Erro Ao Configurar Arquivo de Log. " + e.getMessage());
 		}
@@ -29,24 +29,25 @@ public class LoggerConfig {
 	static class FormatadorDeLog extends Formatter {
 
 		@Override
-		public String format(LogRecord pLog) {
-			StringBuilder vConstruirString = new StringBuilder();
-			String vMensagemLog				 = formatMessage(pLog);
-			String vMensagemLogCompleta = LocalDateTime.now() + " -> " + pLog.getLevel() + ": " + formatMessage(pLog); // Monta a Mensagem Do Log
+		public String format(LogRecord log) {
+			StringBuilder logBuilder 		= new StringBuilder();
+			String mensagemSemTimestamp = (formatMessage(log) != null && !formatMessage(log).trim().isEmpty()) ? formatMessage(log) : ""; // Apenas a Mensagem, Sem Timestamp
+			String mensagemCompleta			= LocalDateTime.now() + " -> " + log.getLevel() + ": " + formatMessage(log); // Monta a Mensagem Do Log Com Timestamp
 
-			// Verifica Se a Mensagem é Idêntica à Última Registrada
-			if (vMensagemLog.equals(vUltimaMensagemLog)) {
-				sobrescreverUltimaLinha(vMensagemLogCompleta + "\n"); // Se For Igual, Sobrescreve a Última Linha
+			// Verifica Se a Mensagem, Sem o Timestamp, é Idêntica à Última Registrada
+			if (mensagemSemTimestamp.equals(ultimaMensagemSemTimestamp)) {
+				// Se For Igual, Sobrescreve o Log Anterior, Mas Atualiza o Timestamp
+				sobrescreverUltimaLinha("\n" + mensagemCompleta + "\n");
 				return ""; // Não Adiciona Uma Nova Linha Ao Log
 			} else {
-				vUltimaMensagemLog = vMensagemLogCompleta; // Atualiza o Último Log Gerado e Constrói o Novo Log
-				vConstruirString.append(vMensagemLogCompleta).append("\n");
+				ultimaMensagemSemTimestamp = mensagemSemTimestamp; // Atualiza a Última Mensagem Gerada
+				logBuilder.append(mensagemCompleta).append("\n");
 
-				if (pLog.getMessage().contains("Finaliza Tarefa")) {
+				if (log.getMessage().contains("Finaliza Tarefa")) {
 					// Adiciona Separador Para Logs De Finalização De Tarefa
-					vConstruirString.append("\n------------------------------------------------------------------\n");
+					logBuilder.append("\n------------------------------------------------------------------\n");
 				}
-				return vConstruirString.toString();
+				return logBuilder.toString();
 			}
 		}
 	}
@@ -55,20 +56,19 @@ public class LoggerConfig {
 	//region Método Para Sobrescrever a Última Linha No Arquivo De Log.
 	private static void sobrescreverUltimaLinha(String mensagem) {
 		try {
-			RandomAccessFile arquivoLogAcessoAleatorio = new RandomAccessFile(CAMINHO_ARQUIVO_LOG, "rw");
-			long length = arquivoLogAcessoAleatorio.length();
-			if (length > 0) {
-				// Move o Ponteiro Para o Final Do Arquivo Menos o Tamanho Do Último Log
-				arquivoLogAcessoAleatorio.seek(length - vUltimaMensagemLog.length() - 1); // Ultimo Log + Quebra De Linha
-				arquivoLogAcessoAleatorio.write(mensagem.getBytes()); // Sobrescreve o Último Log
+			RandomAccessFile acessoArquivoLog = new RandomAccessFile(CAMINHO_ARQUIVO_LOG, "rw");
+			long tamanhoArquivo = acessoArquivoLog.length();
+
+			if (tamanhoArquivo > 0) {
+				// Move o ponteiro para o final do arquivo, menos o tamanho da última mensagem registrada
+				acessoArquivoLog.seek(tamanhoArquivo - ultimaMensagemSemTimestamp.length() - 1); // Última mensagem + quebra de linha
+				acessoArquivoLog.write(mensagem.getBytes()); // Sobrescreve o último log com o novo timestamp
 			}
-			arquivoLogAcessoAleatorio.close();
+			acessoArquivoLog.close();
 		} catch (IOException e) {
 			loggerRobot.severe("Erro Ao Sobrescrever o Log: " + e.getMessage());
 		}
 	}
 	//endregion
 
-
 }
-

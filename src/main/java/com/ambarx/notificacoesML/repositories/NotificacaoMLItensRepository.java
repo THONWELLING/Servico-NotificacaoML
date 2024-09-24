@@ -13,4 +13,7 @@ public interface NotificacaoMLItensRepository extends JpaRepository<NotificacaoM
 
 	@Query(value = "SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY received DESC) AS posicao FROM notificacao_mercadolivre_items ) AS limitada WHERE posicao <= :limit", nativeQuery = true)
 	List<NotificacaoMLItensEntity> findTopNotificacoesPorUserId(@Param("limit") int pLimit);
+
+	@Query(value = "SELECT * FROM notificacao_mercadolivre_items WHERE user_id = 6148929", nativeQuery = true)
+	List<NotificacaoMLItensEntity> findNotificacoesPorUserIda();
 }

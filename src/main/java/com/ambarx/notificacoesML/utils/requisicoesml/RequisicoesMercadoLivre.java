@@ -39,7 +39,7 @@ public static ItemDTO fazerRequisicaoGetItem(String pSkuML, String pTokenSeller,
 		return ModelMapperMapping.parseObject(mercadoLivreHttpClient.fazerRequisicao(urlGetItems, pTokenSeller, pIdentificadorSeller, ItemDTO.class), ItemDTO.class);
 		/*utils.gravaJSON(respostaAPI, "C:/Ambar/Temp/RetornoGetItemMl.txt");*/
 	} catch (IOException excecaoMlItens) {
-		loggerRobot.severe("FALHA: Erro Ao Buscar Dados Na API De Itens. -> " + excecaoMlItens.getMessage());
+		loggerRobot.severe("FALHA: Erro Ao Buscar Dados Na API De Itens. -> \n Seller: -> " + pIdentificadorSeller + "\nMensagem: -> " + excecaoMlItens.getMessage());
     return null;
 	}
 }
