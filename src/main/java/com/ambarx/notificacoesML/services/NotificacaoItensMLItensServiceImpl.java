@@ -96,9 +96,9 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 	//region Função Principal De Processamento Notificação de Itens.
 	@Override
   public void processaNotificacoesMLItems(NotificacaoMLItensRepository notificacaoMLItensRepository) throws Exception {
-		/*List<NotificacaoMLItensEntity> vNotificacoesLimitadas = notificacaoMLItensRepository.findNotificacoesPorUserIda();*/
+		List<NotificacaoMLItensEntity> vNotificacoesLimitadas = notificacaoMLItensRepository.findNotificacoesPorUserIda();
 
-		List<NotificacaoMLItensEntity> vNotificacoesLimitadas = notificacaoMLItensRepository.findTopNotificacoesPorUserId(1000);
+		/*List<NotificacaoMLItensEntity> vNotificacoesLimitadas = notificacaoMLItensRepository.findTopNotificacoesPorUserId(1000);*/
 		List<NotificacaoMLDTO>          arrNotificacoesMLDTOS = ModelMapperMapping.parseListObjects(vNotificacoesLimitadas, NotificacaoMLDTO.class);
 
 		if (arrNotificacoesMLDTOS == null || arrNotificacoesMLDTOS.isEmpty()) {
@@ -250,13 +250,6 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 
 			//endregion
 
-			//region Se Não For Full No GET (APAGA NOTIFICAÇÃO SEM FAZER NADA).
-			if (!objRespostaAPI.getShipping().getLogisticType().equalsIgnoreCase("fulfillment")) {
-				logger.info("Não É Full No GET De Items. Só Deletar.");
-				continue;
-			}
-			//endregion
-
 			//region Pegando Dados Do JSON Response
 			String vSellerSkuGET = "";
 			String vTituloGET				 = utils.limitarQuantCatacteres(objRespostaAPI.getTitle(), 150); //Captura o Título e limita à 150 Caracteres
@@ -289,10 +282,12 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 			}
 			//endregion
 
-			String vEstaAtivoNoDB  = objProdutoNaEcomSku.getEstaAtivo();
-			String vEFulNoDB 			 = objProdutoNaEcomSku.getEFulfillment();
-			int vCodID 						 = objProdutoNaEcomSku.getCodid();
-			boolean vProdVinculado = true;
+			String vEstaAtivoNoDB  				 = objProdutoNaEcomSku.getEstaAtivo();
+			String vEFulNoDB 			 				 = objProdutoNaEcomSku.getEFulfillment();
+			int vCodID 						 				 = objProdutoNaEcomSku.getCodid();
+			boolean vProdVinculado 				 = true;
+			List<AtributoDTO> arrAtributos = objRespostaAPI.getAttributes();
+			String vSellerSKUVariac        = utils.capturaSellerSku(arrAtributos);
 
 			//region Se é Full No DB e Não É Full No GET De Items, Insere o CODID Na Tabela(ESTOQUE_MKTP) .
 			if (vEFulNoDB.equalsIgnoreCase("S") && vEFullNoGET.equalsIgnoreCase("N")) {
@@ -300,15 +295,6 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 				/*if (vCodID > 0) {
 					operacoesNoBanco.inserirSkuIDNaESTOQUE_MKTP(conexaoSQLServer, vCodID);
 				}*/
-			}
-			//endregion
-
-			//region Pegando o Seller_sku do Array de Attributos Produto Simples.
-			for (AtributoDTO atributo : objRespostaAPI.getAttributes()) {
-				if ("SELLER_SKU".equalsIgnoreCase(atributo.getId())) {
-					vSellerSkuGET = ! atributo.getValueName().isEmpty() || atributo.getValueName().isBlank() ? utils.limitarQuantCatacteres(atributo.getValueName().trim(), 30) : atributo.getValueName();
-					break;
-				}
 			}
 			//endregion
 
@@ -334,25 +320,96 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 			}
 			//endregion
 
+			String vCatalogoGET    = objRespostaAPI.isCatalogListing() ? "S" : "N";
+			String vRelacionadoGET = objRespostaAPI.getItemRelations() != null && !objRespostaAPI.getItemRelations().isEmpty() ? "S" : "N";
+
+			//region Fazendo o GET da Comissão No Mercado Livre e Custo Adicional(SÓ VAI USAR SE FOR ATUALIZAR ECOM_SKU).
+			double vValorComissao  = RequisicoesMercadoLivre.fazerRequisicaoGetComissaoML(vTipoDeAnuncioGET, vPrecoNoGET, vCategoriaGET, vTokenTempSeller, pIdentificadorCliente);
+			double vCustoAdicional = utils.calculaCustoAdicional(vValorComissao, vPrecoNoGET, vSupermercado);
+			//endregion
+
+			//region Frete Fazendo o GET do Valor Do Frete No Mercado Livre(SÓ VAI USAR SE FOR ATUALIZAR ECOM_SKU)
+			double vValorFrete = RequisicoesMercadoLivre.fazerRequisicaoGetFrete(userId, vSkuPayloadNotificac, vTokenTempSeller, pIdentificadorCliente);
+			//endregion
+
+			//region Se Não For Full No GET.
+			if (!vEFullNoGET.equalsIgnoreCase("S")) {
+
+				//region Sem Variação.
+				if (arrVariacoes.isEmpty()) {
+					try {
+
+						//region Atualiza Dados e EstoqueNa ECOM_SKU.
+						if (!vCategoriaGET.isEmpty()) {
+							utils.atualizaDadosECOM_SKU(pConexaoSQLServer, vEstoque, vEstaAtivoNoGET, vEFullNoGET, vValorFrete, vCustoAdicional, vValorComissao, vPrecoNoGET, vPrecoNoGET, vSkuPayloadNotificac);
+						}
+						//endregion
+
+
+					} catch (SQLException excecao) {
+						excecao.getCause();
+					}
+
+					if (vInventoryIdGET.length() > 2) {
+						//ML_Inventario_Full(pOrig, vInventoryIdGET);
+						logger.warning("VERIFICAR: SE Implementar Método de Inventário Depois.");
+					}
+
+				}// endregion
+
+				//region Com Variação.
+				else {
+					for (VariacaoDTO vVariacao : arrVariacoes) {
+						String vIdVariacao		= vVariacao.getId();
+						double vVariacaoPreco = vVariacao.getPrice();
+						int 	 vEstoqVariacao	= vVariacao.getAvailableQuantity();
+						String vVariacaoAtiva = vVariacao.getAvailableQuantity() > 0 ? "S" : "N";
+						arrAtributos          = vVariacao.getAttributes();
+						vSellerSKUVariac      = utils.capturaSellerSku(arrAtributos);
+
+						//region Buscando Informações Na Tabela ECOM_SKU do Seller
+						InfoItemsMLDTO objItensVariacaoEcomSku = operacoesNoBanco.buscaProdutovARIACAONaECOM_SKU(pConexaoSQLServer, vIdVariacao, vOrigemDaContaML);
+						if (objItensVariacaoEcomSku != null) {
+							vCodID = Math.max(objItensVariacaoEcomSku.getCodid(), 0);
+						}
+						//endregion
+
+						try {
+
+							//region Atualiza Dados e Estoque Na ECOM_SKU(COMENTADO POR ENQUANTO).
+							if (!vCategoriaGET.isEmpty()) {
+									utils.atualizaDadosECOM_SKU(pConexaoSQLServer, vEstoqVariacao, vVariacaoAtiva, vEFullNoGET, vValorFrete, vCustoAdicional, vValorComissao, vVariacaoPreco, vVariacaoPreco, vSellerSKUVariac);
+							}
+							//endregion
+
+						} catch (SQLException excecao) {
+							excecao.getCause();
+						}
+						if (vInventoryIdGET.length() > 2) {
+							//ML_Inventario_Full(pOrig, vInventoryIdGET);
+							logger.warning("VERIFICAR: Se Vai Implementar Método de Inventário Para Variações Depois.");
+						}
+					}
+
+				} //endregion
+
+			}
+			//endregion
+
 			//region  Se É Full No GET PROCESSA.
 			if (vEFullNoGET.equalsIgnoreCase("S")) {
-				String vCatalogoGET    = objRespostaAPI.isCatalogListing() ? "S" : "N";
-				String vRelacionadoGET = objRespostaAPI.getItemRelations() != null && ! objRespostaAPI.getItemRelations().isEmpty() ? "S" : "N";
-
-				//region Fazendo o GET da Comissão No Mercado Livre e Custo Adicional(SÓ VAI USAR SE FOR ATUALIZAR ECOM_SKU).
-					/*double vValorComissao = RequisicoesMercadoLivre.fazerRequisicaoGetComissaoML(vTipoDeAnuncioGET, vPrecoNoGET, vCategoriaGET, vTokenTempSeller, pIdentificadorCliente);
-					double  vCustoAdicional = utils.calculaCustoAdicional(vValorComissao, vPrecoNoGET, vSupermercado);*/
-				//endregion
-
-				//region Frete Fazendo o GET do Valor Do Frete No Mercado Livre(SÓ VAI USAR SE FOR ATUALIZAR ECOM_SKU)
-					/*double vValorFrete = RequisicoesMercadoLivre.fazerRequisicaoGetFrete(userId, vSkuPayloadNotificac, vTokenTempSeller, pIdentificadorCliente);*/
-				//endregion
 
 				//region Sem Variação.
 				if (arrVariacoes.isEmpty()) {
 					try {
 						//SKU Existe Na ML_SKU_FULL ?
 						DadosMlSkuFullDTO vExiste = operacoesNoBanco.existeNaTabelaMlSkuFull(pConexaoSQLServer, vSkuPayloadNotificac);
+
+						//region Atualiza Dados e EstoqueNa ECOM_SKU.
+						if (!vCategoriaGET.isEmpty()) {
+								utils.atualizaDadosECOM_SKU(pConexaoSQLServer, vEstoque, vEstaAtivoNoGET, vEFullNoGET, vValorFrete, vCustoAdicional, vValorComissao, vPrecoNoGET, vPrecoNoGET, vSkuPayloadNotificac);
+						}
+						//endregion
 
 						if (vExiste.getVExiste() <= 0) {
 							try {
@@ -385,7 +442,10 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 						String vIdVariacao		  = vVariacao.getId();
 						double vVariacaoPreco   = vVariacao.getPrice();
 						int 	 vEstoqVariacao	  = vVariacao.getAvailableQuantity();
-						String vSellerSKUVariac = "";
+						String vVariacaoAtiva   = vVariacao.getAvailableQuantity() > 0 ? "S" : "N";
+						String vUrlImagemVariac = "https://http2.mlstatic.com/D_" + vVariacao.getPictureIds().get(0) + "-N.jpg";
+						arrAtributos            = vVariacao.getAttributes();
+						vSellerSKUVariac        = utils.capturaSellerSku(arrAtributos);
 
 						//region Buscando Informações Na Tabela ECOM_SKU do Seller
 						InfoItemsMLDTO objItensVariacaoEcomSku = operacoesNoBanco.buscaProdutovARIACAONaECOM_SKU(pConexaoSQLServer, vIdVariacao, vOrigemDaContaML);
@@ -398,16 +458,8 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 						StringBuilder vVarBuilder = new StringBuilder();
 
 						for (AtributoDTO atributoVariacao : vVariacao.getAttributes()) {
-
 							if ("attribute_combinations".equalsIgnoreCase(atributoVariacao.getId())) {
 								vVarBuilder.append(atributoVariacao.getValueName()).append(", ");
-								break;
-							}
-
-							if ("SELLER_SKU".equalsIgnoreCase(atributoVariacao.getId())) {
-								vSellerSKUVariac = ! atributoVariacao.getValueName().isEmpty() || ! atributoVariacao.getValueName().isBlank() ?
-										utils.limitarQuantCatacteres(atributoVariacao.getValueName().trim(), 50) :
-										atributoVariacao.getValueName();
 								break;
 							}
 						}
@@ -416,7 +468,7 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 						if (!vVarBuilder.isEmpty()) {
 							vVarBuilder.setLength(vVarBuilder.length() - 2);
 						}
-						String vVar = vVarBuilder.toString();
+						String vValorVariacao = vVarBuilder.toString();
 						//endregion
 
 						//endregion
@@ -425,9 +477,15 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 							//O SKU Existe Na ML_SKU_FULL ?
 							DadosMlSkuFullDTO vExiste = operacoesNoBanco.existeNaTabelaMlSkuFull(pConexaoSQLServer, vSkuPayloadNotificac, vIdVariacao);
 
+							//region Atualiza Dados e Estoque Na ECOM_SKU.
+							if (!vCategoriaGET.isEmpty()) {
+									utils.atualizaDadosECOM_SKU(pConexaoSQLServer, vEstoqVariacao, vVariacaoAtiva, vEFullNoGET, vValorFrete, vCustoAdicional, vValorComissao, vVariacaoPreco, vVariacaoPreco, vSellerSKUVariac);
+							}
+							//endregion
+
 							if (vExiste.getVExiste() == 0) {
 								try {
-									operacoesNoBanco.inserirProdutoNaTabelaMlSkuFull(pConexaoSQLServer, vOrigemDaContaML, vCodID, vSellerSKUVariac, vIdVariacao, vVar, vInventoryIdGET, vTituloGET, vEstaAtivoNoGET, vVariacaoPreco, vUrlDaImagemGET, vCatalogoGET, vRelacionadoGET);
+									operacoesNoBanco.inserirProdutoNaTabelaMlSkuFull(pConexaoSQLServer, vOrigemDaContaML, vCodID, vSellerSKUVariac, vIdVariacao, vValorVariacao, vInventoryIdGET, vTituloGET, vVariacaoAtiva, vVariacaoPreco, vUrlImagemVariac, vCatalogoGET, vRelacionadoGET);
 								} catch (SQLException excecao) {
 									loggerRobot.severe("ERRO: " + excecao.getMessage());
 								}
@@ -475,19 +533,9 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 				//Variações
 				else {
 					for (VariacaoDTO vVariacao : arrVariacoes) {
-						String vIdVariacao		  = vVariacao.getId();
-						double vVariacaoPreco	  = vVariacao.getPrice();
-						String vUrlImagem		 	  = "https://http2.mlstatic.com/D_" + vVariacao.getPictureIds().get(0) + "-N.jpg";
-						String vSellerSKUVariac = "";
-
-						//region Percorre o Array de Atributos da Variação Buscar Seller_Sku.
-						for (AtributoDTO atributoVariacao : vVariacao.getAttributes()) {
-							if ("SELLER_SKU".equalsIgnoreCase(atributoVariacao.getId())) {
-								vSellerSKUVariac = atributoVariacao.getValueName();
-								break;
-							}
-						}
-						//endregion
+						String vIdVariacao		= vVariacao.getId();
+						double vVariacaoPreco	= vVariacao.getPrice();
+						String vUrlImagem		 	= "https://http2.mlstatic.com/D_" + vVariacao.getPictureIds().get(0) + "-N.jpg";
 
 						if (!vSellerSKUVariac.isEmpty()) {
 							try {
@@ -506,16 +554,6 @@ public class NotificacaoItensMLItensServiceImpl implements NotificacaoMLItensSer
 				}
 
 			}//endregion
-
-			//region Atualiza Dados e EstoqueNa ECOM_SKU(COMENTADO POR ENQUANTO).
-			/*if (!vCategoriaGET.isEmpty()) {
-				if (vEstoque >= 0) {
-					operacoesNoBanco.atualizaDadosEEstoqNaECOMSKU(conexaoSQLServer, vEstoque, vEstaAtivoNoGET, vEFullNoGET, vValorFrete, vCustoAdicional, vValorComissao, vPrecoNoGET, vPrecoNoGET, vSkuPayloadNotificac);
-				} else {
-					operacoesNoBanco.atualizaDadosNaECOMSKU(conexaoSQLServer, vEstaAtivoNoGET, vEFullNoGET, vValorFrete, vCustoAdicional, vValorComissao, vPrecoNoGET, vPrecoNoGET, vSkuPayloadNotificac);
-				}
-			}*/
-			//endregion
 
 		}
   }

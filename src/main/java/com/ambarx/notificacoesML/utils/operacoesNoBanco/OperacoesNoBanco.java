@@ -10,9 +10,9 @@ import com.ambarx.notificacoesML.utils.FuncoesUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.sql.*;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -141,10 +141,9 @@ public class OperacoesNoBanco {
 
           //region Pega As Informações Do Banco e Guarda Nas Variáveis
           int    vCodID      = resultSet.getInt("MATERIAL_ID");
-          String vSkuNoBanco = !resultSet.getString("SKU").isEmpty()         || !resultSet.getString("SKU").isBlank()         ? resultSet.getString("SKU").trim()         : resultSet.getString("SKU");
-          String vEstaAtivo  = !resultSet.getString("ATIVO").isEmpty()       || !resultSet.getString("ATIVO").isBlank()       ? resultSet.getString("ATIVO").trim()       : resultSet.getString("ATIVO");
-          String vEFull      = !resultSet.getString("FULFILLMENT").isEmpty() || !resultSet.getString("FULFILLMENT").isBlank() ? resultSet.getString("FULFILLMENT").trim() : resultSet.getString("FULFILLMENT");
-          logger.info("SKU Encontrado No Banco.");
+          String vSkuNoBanco = StringUtils.hasText(resultSet.getString("SKU"))         ? resultSet.getString("SKU").trim()         : resultSet.getString("SKU");
+          String vEstaAtivo  = StringUtils.hasText(resultSet.getString("ATIVO"))       ? resultSet.getString("ATIVO").trim()       : resultSet.getString("ATIVO");
+          String vEFull      = StringUtils.hasText(resultSet.getString("FULFILLMENT")) ? resultSet.getString("FULFILLMENT").trim() : resultSet.getString("FULFILLMENT");
           //endregion
 
           //region Seta Os Campos Do Objeto DTO Com As Informações Obtidas No Banco.
@@ -182,10 +181,9 @@ public class OperacoesNoBanco {
 
           //region Pega As Informações Do Banco e Guarda Nas Variáveis
           int    vCodID      = resultSet.getInt("MATERIAL_ID");
-          String vSkuNoBanco = !resultSet.getString("SKU").isEmpty()         || !resultSet.getString("SKU").isBlank()         ? resultSet.getString("SKU").trim()         : resultSet.getString("SKU");
-          String vEstaAtivo  = !resultSet.getString("ATIVO").isEmpty()       || !resultSet.getString("ATIVO").isBlank()       ? resultSet.getString("ATIVO").trim()       : resultSet.getString("ATIVO");
-          String vEFull      = !resultSet.getString("FULFILLMENT").isEmpty() || !resultSet.getString("FULFILLMENT").isBlank() ? resultSet.getString("FULFILLMENT").trim() : resultSet.getString("FULFILLMENT");
-          logger.info("SKU Encontrado No Banco");
+          String vSkuNoBanco = StringUtils.hasText(resultSet.getString("SKU"))         ? resultSet.getString("SKU").trim()         : resultSet.getString("SKU");
+          String vEstaAtivo  = StringUtils.hasText(resultSet.getString("ATIVO"))       ? resultSet.getString("ATIVO").trim()       : resultSet.getString("ATIVO");
+          String vEFull      = StringUtils.hasText(resultSet.getString("FULFILLMENT")) ? resultSet.getString("FULFILLMENT").trim() : resultSet.getString("FULFILLMENT");
           //endregion
 
           //region Seta Os Campos Do Objeto DTO Com As Informações Obtidas No Banco.
