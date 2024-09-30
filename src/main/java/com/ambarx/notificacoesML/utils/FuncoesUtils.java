@@ -1,11 +1,15 @@
 package com.ambarx.notificacoesML.utils;
 
 import com.ambarx.notificacoesML.config.logger.LoggerConfig;
+import com.ambarx.notificacoesML.dto.infodobanco.DadosMlSkuFullDTO;
 import com.ambarx.notificacoesML.dto.item.AtributoDTO;
+import com.ambarx.notificacoesML.dto.item.InfoItemsMLDTO;
+import com.ambarx.notificacoesML.dto.item.VariacaoDTO;
 import com.ambarx.notificacoesML.dto.notificacao.NotificacaoMLDTO;
 import com.ambarx.notificacoesML.utils.operacoesNoBanco.OperacoesNoBanco;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,13 +26,11 @@ import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+@AllArgsConstructor
 @Service
 public class FuncoesUtils {
   private static final Logger loggerRobot = LoggerConfig.getLoggerRobot();
   private static final Logger logger      = Logger.getLogger(FuncoesUtils.class.getName());
-
-  @Autowired
-  private OperacoesNoBanco operacoesNoBanco;
 
   //region Função Para Agrupar As Notificações De Itens e Filtrar Para Evitar Requisições Desnecessárias
     /**
@@ -191,37 +193,6 @@ public class FuncoesUtils {
   }
   //endregion
 
-  //region Função Para Limitar Quantidade De Caracteres
-  public String limitarQuantCatacteres(String pDadoParaLimitar, int pQuantMaxima) {
-    if (pDadoParaLimitar == null) {
-      return null;
-    }
-    return pDadoParaLimitar.length() > pQuantMaxima ? pDadoParaLimitar.substring(0, pQuantMaxima) : pDadoParaLimitar;
-  }
-    //endregion
-
-	//region Função Para Extrair o Valor Do Atributo `SELLER_SKU` Do Array De Atributos.
-	public String capturaSellerSku(List<AtributoDTO> arrAtributos) {
-    for (AtributoDTO atributo : arrAtributos) {
-      if ("SELLER_SKU".equalsIgnoreCase(atributo.getId())) {
-        return !atributo.getValueName().isEmpty() || !atributo.getValueName().isBlank()
-               ? limitarQuantCatacteres(atributo.getValueName().trim(), 30)
-               : atributo.getValueName();
-      }
-    }
-    return "";
-  }
-	//endregion
-
-	//region Função Auxiliar Para Atualizar Dados Na ECOM_SKU.
-	public void atualizaDadosECOM_SKU(Connection pConexaoSQLServer, int vEstoque, String vEstaAtivoNoGET, String vEFullNoGET, double vValorFrete, double vCustoAdicional, double vValorComissao, double vPrecoDe, double vPrecoPor, String vSkuPayloadNotificac) throws SQLException {
-    if (vEstoque >= 0) {
-      operacoesNoBanco.atualizaDadosEEstoqNaECOMSKU(pConexaoSQLServer, vEstoque, vEstaAtivoNoGET, vEFullNoGET, vValorFrete, vCustoAdicional, vValorComissao, vPrecoDe, vPrecoPor, vSkuPayloadNotificac);
-    } else {
-      operacoesNoBanco.atualizaDadosNaECOMSKU(pConexaoSQLServer, vEstaAtivoNoGET, vEFullNoGET, vValorFrete, vCustoAdicional, vValorComissao, vPrecoDe, vPrecoDe, vSkuPayloadNotificac);
-    }
-  }
-	//endregion
 
 
 }

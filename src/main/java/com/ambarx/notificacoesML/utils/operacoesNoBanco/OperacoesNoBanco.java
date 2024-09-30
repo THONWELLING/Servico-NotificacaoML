@@ -7,6 +7,7 @@ import com.ambarx.notificacoesML.dto.item.InfoItemsMLDTO;
 import com.ambarx.notificacoesML.dto.notificacao.NotificacaoMLDTO;
 import com.ambarx.notificacoesML.repositories.NotificacaoMLItensRepository;
 import com.ambarx.notificacoesML.utils.FuncoesUtils;
+import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Component;
@@ -19,7 +20,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-
+@AllArgsConstructor
 @Component
 public class OperacoesNoBanco {
   private static final Logger loggerRobot = LoggerConfig.getLoggerRobot();
@@ -27,7 +28,8 @@ public class OperacoesNoBanco {
 
   @Autowired
   NotificacaoMLItensRepository itensRepository;
-  private final FuncoesUtils utils = new FuncoesUtils();
+  @Autowired
+  private FuncoesUtils utils;
 
 	//region Função Para Deletar Uma Notificação Por ID.
 	public void deletaNotificacaoPorID(Long pIDNotificacaoAtual) {
@@ -58,8 +60,8 @@ public class OperacoesNoBanco {
     try (Statement statement = pConexao.createStatement();
          ResultSet resultSet = statement.executeQuery("SELECT VALOR FROM PARAMETROS_SYS WHERE PARAMETRO = 'IGNORAR_GETSKU' AND EMPRESA = 0")) {
       if (resultSet.next()) {
-        String vValorParametro = resultSet.getString("VALOR");
-        if (vValorParametro == null || vValorParametro.isEmpty()) {
+        String vValorParametro = !resultSet.getString("VALOR").isEmpty() ? resultSet.getString("VALOR").trim() : resultSet.getString("VALOR");
+        if (vValorParametro == null || vValorParametro.isEmpty() || vValorParametro.equalsIgnoreCase("N")) {
           logger.info("Parâmetro IGNORARGETSKU Está Vazio Ou Null. Considerar N.");
           vValorParametro = "N";
           return false;
@@ -234,12 +236,13 @@ public class OperacoesNoBanco {
 
   //region Função Para Atualizar Dados e ESTOQUE De Um Produto Na Tabela ECOM_SKU.
   public void atualizaDadosEEstoqNaECOMSKU(Connection pConexao, int pEstoque, String pAtivo, String pFulfillment, double pFrete, double pCustoAdicional, double pComissao,
-                                           double pPrecoDe, double pPrecoPor, String pSkuNotificacao) throws SQLException {
+                                           double pPrecoDe, double pPrecoPor, String pSku, boolean vEhVariacao) throws SQLException {
 
     logger.info("Atualizando Dados e ESTOQUE do SKU Na Tabela ECOM_SKU.");
 
-    String Qry_AtualizaECOMSku = "UPDATE ECOM_SKU SET ESTOQUE = ?, ATIVO = ?, FULFILLMENT = ?, CUSTO_FRETE = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, VLR_SITE1 = ?,"
-                               + " VLR_SITE2 = ?, DT_GET = ? WHERE SKU = ?";
+    String Qry_AtualizaECOMSku = vEhVariacao
+        ? "UPDATE ECOM_SKU SET ESTOQUE = ?, ATIVO = ?, FULFILLMENT = ?, CUSTO_FRETE = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, VLR_SITE1 = ?, VLR_SITE2 = ?, DT_GET = ? WHERE SKUVARIACAO_MASTER = ?"
+        : "UPDATE ECOM_SKU SET ESTOQUE = ?, ATIVO = ?, FULFILLMENT = ?, CUSTO_FRETE = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, VLR_SITE1 = ?, VLR_SITE2 = ?, DT_GET = ? WHERE SKU = ?";
 
     Date vDataHr = new Date(System.currentTimeMillis());
     try (PreparedStatement statement = pConexao.prepareStatement(Qry_AtualizaECOMSku)) {
@@ -254,7 +257,7 @@ public class OperacoesNoBanco {
       statement.setDouble( 7, pPrecoDe);
       statement.setDouble( 8, pPrecoPor);
       statement.setDate(   9, vDataHr);
-      statement.setString(10, pSkuNotificacao);
+      statement.setString(10, pSku);
 			//endregion
 
       int linhasAfetadas = statement.executeUpdate();
@@ -271,14 +274,16 @@ public class OperacoesNoBanco {
   }
   //endregion
 
-  //region Função Para Atualizar Dados e ESTOQUE De Um Produto Na Tabela ECOM_SKU.
+  //region Função Para Atualizar Dados Sem ESTOQUE De Um Produto Na Tabela ECOM_SKU.
   public void atualizaDadosNaECOMSKU(Connection pConexao, String pAtivo, String pFulfillment, double pFrete, double pCustoAdicional, double pComissao, double pPrecoDe,
-                                     double pPrecoPor, String pSkuNotificacao) throws SQLException {
+                                     double pPrecoPor, String pSkuNotificacao, boolean vEhVariacao) throws SQLException {
 
     logger.info("Atualizando Dados do SKU Na Tabela ECOM_SKU.");
 
-    String Qry_AtualizaECOMSku = "UPDATE ECOM_SKU SET ATIVO = ?, FULFILLMENT = ?, CUSTO_FRETE = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, VLR_SITE1 = ?,"
-                               + " VLR_SITE2 = ?, DT_GET = ? WHERE SKU = ?";
+    String Qry_AtualizaECOMSku = vEhVariacao
+        ? "UPDATE ECOM_SKU SET ESTOQUE = ?, ATIVO = ?, FULFILLMENT = ?, CUSTO_FRETE = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, VLR_SITE1 = ?, VLR_SITE2 = ?, DT_GET = ? WHERE SKUVARIACAO_MASTER = ?"
+        : "UPDATE ECOM_SKU SET ESTOQUE = ?, ATIVO = ?, FULFILLMENT = ?, CUSTO_FRETE = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, VLR_SITE1 = ?, VLR_SITE2 = ?, DT_GET = ? WHERE SKU = ?";
+
 
     Date vDataHr = new Date(System.currentTimeMillis());
     try (PreparedStatement statement = pConexao.prepareStatement(Qry_AtualizaECOMSku)) {

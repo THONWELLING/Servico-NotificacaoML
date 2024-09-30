@@ -11,15 +11,15 @@ import java.util.List;
 @Repository
 public interface NotificacaoMLItensRepository extends JpaRepository<NotificacaoMLItensEntity, Long> {
 
-//region Query Antiga.
-/*@Query(value = """
-				SELECT *
-				FROM (
-							SELECT *, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY received DESC) AS posicao
-							FROM notificacao_mercadolivre_items
-						 ) AS limitada
-				WHERE posicao <= :limit""", nativeQuery = true)*/
-//endregion
+	//region Query Antiga.
+	/*@Query(value = """
+					SELECT *
+					FROM (
+								SELECT *, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY received DESC) AS posicao
+								FROM notificacao_mercadolivre_items
+							 ) AS limitada
+					WHERE posicao <= :limit""", nativeQuery = true)*/
+	//endregion
 
 	@Query(value = """
         SELECT notificacoesLimitadas.*
@@ -28,7 +28,7 @@ public interface NotificacaoMLItensRepository extends JpaRepository<NotificacaoM
               FROM notificacao_mercadolivre_items
               ) AS notificacoesLimitadas
         JOIN sellers_mercadolivre ON notificacoesLimitadas.user_id = sellers_mercadolivre.seller_id
-        WHERE sellers_mercadolivre.identificador_cliente <> 'desconhecido'
+        WHERE sellers_mercadolivre.identificador_cliente NOT IN ('desconhecido', 'vgshop')
           AND notificacoesLimitadas.posicao <= :limit
         ORDER BY notificacoesLimitadas.posicao
         """, nativeQuery = true)
