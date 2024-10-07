@@ -14,12 +14,12 @@ import lombok.Setter;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class EnderecoVendedorDTO {
 
-  private Long id;
-  private String comment;
-  private String addressLine;
+  private Long           id;
+  private String         comment;
+  private String         addressLine;
   private String         zipCode;
   private LocalizacaoDTO searchLocation;
   private CidadeDTO      city;
-  private EstadoDTO   state;
-  private PaisDTO     country;
+  private EstadoDTO      state;
+  private PaisDTO        country;
 }

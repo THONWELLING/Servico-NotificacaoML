@@ -14,6 +14,6 @@ import lombok.Setter;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class ItemRelationDTO {
   private String id;
-  private Long variationId;
-  private int stockRelation;
+  private Long   variationId;
+  private int    stockRelation;
 }

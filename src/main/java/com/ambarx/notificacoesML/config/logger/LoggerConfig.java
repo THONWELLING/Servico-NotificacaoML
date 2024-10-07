@@ -11,7 +11,7 @@ public class LoggerConfig {
 	@Getter
 	private static final Logger loggerRobot 				 = Logger.getLogger("LoggerORobot");
 	private static String ultimaMensagemSemTimestamp = ""; // Armazena a última mensagem sem timestamp
-	private static final String CAMINHO_ARQUIVO_LOG  = "C:/Ambar/Temp/notificacaoMLLogs.log";
+	private static final String CAMINHO_ARQUIVO_LOG  = "C:/Ambar/Temp/notificacaoMLLogs.log"; // C:/Ambar/Temp/MLLogsDebug.log
 
 	static {
 		try {
@@ -32,7 +32,7 @@ public class LoggerConfig {
 		public String format(LogRecord log) {
 			StringBuilder logBuilder 		= new StringBuilder();
 			String mensagemSemTimestamp = (formatMessage(log) != null && !formatMessage(log).trim().isEmpty()) ? formatMessage(log) : ""; // Apenas a Mensagem, Sem Timestamp
-			String mensagemCompleta			= LocalDateTime.now() + " -> " + log.getLevel() + ": " + formatMessage(log); // Monta a Mensagem Do Log Com Timestamp
+			String mensagemCompleta			= LocalDateTime.now() + " -> " + log.getLevel() + ": " + mensagemSemTimestamp; // Monta a Mensagem Do Log Com Timestamp
 
 			// Verifica Se a Mensagem, Sem o Timestamp, é Idêntica à Última Registrada
 			if (mensagemSemTimestamp.equals(ultimaMensagemSemTimestamp)) {

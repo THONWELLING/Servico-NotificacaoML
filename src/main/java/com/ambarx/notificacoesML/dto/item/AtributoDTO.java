@@ -12,7 +12,6 @@ import java.util.ArrayList;
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-@Setter
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class AtributoDTO {
 
@@ -21,6 +20,4 @@ public class AtributoDTO {
   private String valueId;
   private String valueName;
   private String valueType;
-
-
 }

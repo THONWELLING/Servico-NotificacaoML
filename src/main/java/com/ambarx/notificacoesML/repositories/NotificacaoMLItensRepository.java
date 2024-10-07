@@ -27,13 +27,21 @@ public interface NotificacaoMLItensRepository extends JpaRepository<NotificacaoM
               SELECT *, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY received DESC) AS posicao
               FROM notificacao_mercadolivre_items
               ) AS notificacoesLimitadas
-        JOIN sellers_mercadolivre ON notificacoesLimitadas.user_id = sellers_mercadolivre.seller_id
-        WHERE sellers_mercadolivre.identificador_cliente NOT IN ('desconhecido', 'vgshop')
+        JOIN sellers_mercadolivre sellers_ml ON notificacoesLimitadas.user_id = sellers_ml.seller_id
+        WHERE sellers_ml.identificador_cliente NOT IN ('desconhecido')
           AND notificacoesLimitadas.posicao <= :limit
         ORDER BY notificacoesLimitadas.posicao
         """, nativeQuery = true)
 	List<NotificacaoMLItensEntity> findTopNotificacoesPorUserId(@Param("limit") int pLimit);
 
-	@Query(value = "SELECT * FROM notificacao_mercadolivre_items WHERE user_id = 532496825", nativeQuery = true)
+	//region Buscar Notificações Somente da vgshop.
+	@Query(value = "SELECT * FROM notificacao_mercadolivre_items WHERE user_id IN (242864502, 462118052, 532496825, 239750995, 1113952563, 1612067589, 1614118256)", nativeQuery = true)
 	List<NotificacaoMLItensEntity> findNotificacoesPorUserIda();
+	//endregion
+
+	//region Busca Notificações Somente da CMC
+/*	@Query(value = "SELECT * FROM notificacao_mercadolivre_items WHERE user_id IN (14001958, 36127327, 65426154, 1005162109, 1155851487, 44056971, 1201249297, 746615311, 764521626, 404143232, 340132258, 169792382, 1463843468, 1524398555, 735327437, 1941226791, 1959039009)", nativeQuery = true)
+		List<NotificacaoMLItensEntity> findNotificacoesPorUserIda();*/
+	//endregion
+
 }

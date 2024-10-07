@@ -15,7 +15,6 @@ public class StartUp {
 	public static void main(String[] args) throws SQLException {
 		System.setProperty("jakarta.net.debug", "all");
 		SpringApplication.run(StartUp.class, args);
-		System.out.println("Serviço Está Rodando Na Porta: 80");
 		System.out.println("SERVIÇO NOTIFICAÇÃO ITEMS MERCADO LIVRE");
 	}
 

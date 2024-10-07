@@ -13,8 +13,10 @@ import lombok.Setter;
 @Setter
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class SaleFeeDetailsDTO {
+/*
   private double fixedFee;
   private double grossAmount;
+*/
   private double percentageFee;
 
 }

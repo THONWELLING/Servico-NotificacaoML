@@ -15,13 +15,13 @@ import java.util.ArrayList;
 @Setter
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class EnvioDTO {
-  private String mode;
+  private String            mode;
   private ArrayList<String> methods;
   private ArrayList<String> tags;
-  private String  dimensions;
-  private boolean localPickUp;
-  private boolean freeShipping;
-  private String  logisticType;
-  private boolean storePickUp;
+  private String            dimensions;
+  private boolean           localPickUp;
+  private boolean           freeShipping;
+  private String            logisticType;
+  private boolean           storePickUp;
 }
 

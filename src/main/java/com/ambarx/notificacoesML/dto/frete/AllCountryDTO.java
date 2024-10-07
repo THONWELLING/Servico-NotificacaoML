@@ -14,6 +14,8 @@ import lombok.Setter;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class AllCountryDTO {
   private double listCost;
+/*
   private String currencyId;
   private int billableWeight;
+*/
 }

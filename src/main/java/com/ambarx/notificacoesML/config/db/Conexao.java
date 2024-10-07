@@ -20,7 +20,6 @@ import java.util.logging.Logger;
 @Component
 public class Conexao {
   private static final Logger loggerRobot   = LoggerConfig.getLoggerRobot();
-  private static final Logger logger        = Logger.getLogger(Conexao.class.getName());
   private final List<String> PROTOCOLOS_TLS = Arrays.asList("TLSv1.3", "TLSv1.2", "TLSv1.1", "TLSv1");
   private final ConfigDataSourceDinamico dataSourceDinamico;
 
@@ -48,7 +47,8 @@ public class Conexao {
 
     if("ativo".equalsIgnoreCase(cliente.getStatusCliente()) || "prospect".equalsIgnoreCase(cliente.getStatusCliente()) && "remoto".equalsIgnoreCase(cliente.getTipoAcesso())) {
 
-      logger.info("Conectando Ao Banco Do Seller. " + cliente.getIdentificadorCliente());
+      Exception ultimaExcecao = null;
+
       for (String vProtocoloTLS : PROTOCOLOS_TLS) {
         try {
           SSLContext contextoSSL = SSLContext.getInstance(vProtocoloTLS);
@@ -64,11 +64,17 @@ public class Conexao {
           return dataSource.getConnection();
 
         } catch (Exception e) {
-          loggerRobot.warning("\n FALHA Ao Conectar Ao Banco: " + database + " \nSeller: -> " + cliente.getIdentificadorCliente() + " Usando O Protocolo -> "
-                                  + vProtocoloTLS + ":\n -> " + e.getMessage());
+          ultimaExcecao = e;
         }
       }
-      loggerRobot.severe("Nenhum Protocolo TLS Foi Capaz de Estabelecer Conexão com o Banco Do Seller. " + cliente.getIdentificadorCliente()
+
+			if (ultimaExcecao != null) {
+				loggerRobot.warning("\nFALHA Ao Conectar Ao Banco: " + database         +
+                                 "\nSeller: -> " + cliente.getIdentificadorCliente() +
+                                 "\nMensagem Do Ultimo Erro  -> " + ultimaExcecao.getMessage());
+			}
+
+			loggerRobot.severe("Nenhum Protocolo TLS Foi Capaz de Estabelecer Conexão com o Banco Do Seller. " + cliente.getIdentificadorCliente()
                             + " Banco: -> " + cliente.getBanco());
     }
     return null;
