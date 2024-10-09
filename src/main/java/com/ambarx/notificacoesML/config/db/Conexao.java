@@ -71,11 +71,13 @@ public class Conexao {
 			if (ultimaExcecao != null) {
 				loggerRobot.warning("\nFALHA Ao Conectar Ao Banco: " + database         +
                                  "\nSeller: -> " + cliente.getIdentificadorCliente() +
-                                 "\nMensagem Do Ultimo Erro  -> " + ultimaExcecao.getMessage());
+                                 "\nMensagem Do Ultimo Erro  -> " + ultimaExcecao.getMessage()
+        );
 			}
 
 			loggerRobot.severe("Nenhum Protocolo TLS Foi Capaz de Estabelecer Conexão com o Banco Do Seller. " + cliente.getIdentificadorCliente()
-                            + " Banco: -> " + cliente.getBanco());
+                            + " Banco: -> " + cliente.getBanco()
+      );
     }
     return null;
 

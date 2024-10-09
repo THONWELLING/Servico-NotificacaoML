@@ -12,4 +12,5 @@ public class NotificacaoMLException extends Exception {
 		this.userId = userId;
 		this.vIdentificadorCliente = vIdentificadorCliente;
 	}
+
 }

@@ -1,6 +1,7 @@
 package com.ambarx.notificacoesML.httpclients;
 
 import com.ambarx.notificacoesML.customizedExceptions.LimiteRequisicaoMLException;
+import com.ambarx.notificacoesML.customizedExceptions.NotFoundMLException;
 import com.ambarx.notificacoesML.utils.RespostaAPI;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,7 +42,7 @@ class MercadoLivreHttpClientTest {
 	}
 
 	@Test
-	public void testFazerRequisicao_200OK() throws IOException, LimiteRequisicaoMLException {
+	public void testFazerRequisicao_200OK() throws IOException, LimiteRequisicaoMLException, NotFoundMLException {
 		// Configurando Resposta Simulada para 200 OK
 		when(restTemplate.exchange(
 						 any(URI.class),
@@ -59,7 +60,7 @@ class MercadoLivreHttpClientTest {
 	}
 
 	@Test
-	public void testFazerRequisicao_400BadRequest() throws IOException, LimiteRequisicaoMLException {
+	public void testFazerRequisicao_400BadRequest() throws IOException, LimiteRequisicaoMLException, NotFoundMLException {
 		// Configurando Resposta Simulada para 400 Bad Request
 		when(restTemplate.exchange(
 						 any(URI.class),
@@ -96,7 +97,7 @@ class MercadoLivreHttpClientTest {
 	}
 
 	@Test
-	public void testFazerRequisicao_ThrowRestClientException() throws IOException, LimiteRequisicaoMLException {
+	public void testFazerRequisicao_ThrowRestClientException() throws IOException, LimiteRequisicaoMLException, NotFoundMLException {
 		// Simulando um erro de rede (RestClientException)
 		when(restTemplate.exchange(
 						 any(URI.class),

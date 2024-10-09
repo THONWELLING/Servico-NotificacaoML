@@ -15,6 +15,9 @@ public class ResponseErrorHandlerCustomizado implements ResponseErrorHandler {
 
 	@Override
 	public void handleError(ClientHttpResponse response) throws IOException {
+		if (response.getStatusCode() == HttpStatus.NOT_FOUND) {
+			return;
+		}
 		if (response.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
 			return;
 		}

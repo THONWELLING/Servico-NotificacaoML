@@ -1,6 +1,7 @@
 package com.ambarx.notificacoesML.utils.requisicoesml;
 
 import com.ambarx.notificacoesML.customizedExceptions.LimiteRequisicaoMLException;
+import com.ambarx.notificacoesML.customizedExceptions.NotFoundMLException;
 import com.ambarx.notificacoesML.dto.comissao.ComissaoDTO;
 import com.ambarx.notificacoesML.dto.frete.FreteDTO;
 import com.ambarx.notificacoesML.dto.item.ItemDTO;
@@ -28,7 +29,7 @@ public RequisicoesMercadoLivre(RestTemplate restTemplate) {
 }
 
 	//region Função Para Fazer a Requisição De Items.
-	public static RespostaAPI<ItemDTO> fazerRequisicaoGetItem(String pSkuML, String pTokenSeller, String pIdentificadorSeller, String pApi) throws IOException, LimiteRequisicaoMLException {
+	public static RespostaAPI<ItemDTO> fazerRequisicaoGetItem(String pSkuML, String pTokenSeller, String pIdentificadorSeller, String pApi) throws IOException, LimiteRequisicaoMLException, NotFoundMLException {
 		String urlGetItems = "https://api.mercadolibre.com/items/" + pSkuML + "?include_attributes=all";
 		return mercadoLivreHttpClient.fazerRequisicao(urlGetItems, pTokenSeller, pIdentificadorSeller, ItemDTO.class, pApi);
 
@@ -37,7 +38,7 @@ public RequisicoesMercadoLivre(RestTemplate restTemplate) {
 	//endregion
 
 	//region Função Para Fazer a Requisição De Comissão.
-	public static RespostaAPI<ComissaoDTO> fazerRequisicaoGetComissaoML(String pTipoDeAnuncio, double pPreco, String pCategoria, String pTokenSeller, String pIdentificadorSeller, String pApi) throws IOException, LimiteRequisicaoMLException {
+	public static RespostaAPI<ComissaoDTO> fazerRequisicaoGetComissaoML(String pTipoDeAnuncio, double pPreco, String pCategoria, String pTokenSeller, String pIdentificadorSeller, String pApi) throws IOException, LimiteRequisicaoMLException, NotFoundMLException {
 		DecimalFormatSymbols symbols = new DecimalFormatSymbols();
 		symbols.setDecimalSeparator('.');
 		DecimalFormat formatoValor   = new DecimalFormat("0.00", symbols);
@@ -47,11 +48,12 @@ public RequisicoesMercadoLivre(RestTemplate restTemplate) {
 	}
 	//endregion
 
-	//region Função Para Fazer a Requisição De Frete.
-	public static RespostaAPI<FreteDTO> fazerRequisicaoGetFrete(String pUserId, String pSkuML, String pTokenSeller, String pIdentificadorSeller, String pApi) throws IOException, LimiteRequisicaoMLException {
+	//region Função Para Fazer a Requisição De Frete(Comentado Muito 429).
+	/*public static RespostaAPI<FreteDTO> fazerRequisicaoGetFrete(String pUserId, String pSkuML, String pTokenSeller, String pIdentificadorSeller, String pApi) throws IOException, LimiteRequisicaoMLException, NotFoundMLException {
 		String urlFrete = "https://api.mercadolibre.com/users/" + pUserId + "/shipping_options/free?item_id=" + pSkuML;
 		return mercadoLivreHttpClient.fazerRequisicao(urlFrete, pTokenSeller, pIdentificadorSeller, FreteDTO.class, pApi);
-	}
+	}*/
 	//endregion
+
 
 }

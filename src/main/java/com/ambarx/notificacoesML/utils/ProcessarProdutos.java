@@ -48,38 +48,47 @@ public class ProcessarProdutos {
 
 	//region Função Auxiliar Para Atualizar Dados Na ECOM_SKU.
 	public void atualizaDadosECOM_SKU(Connection pConexaoSQLServer, int vEstoque, String vEstaAtivoNoGET, String vEFullNoGET,
-																		double vValorFrete, double vCustoAdicional, double vValorComissao, String vSku, boolean vEhVariacao,
+																		/*double vValorFrete,*/ double vCustoAdicional, double vValorComissao, String vSku, boolean vEhVariacao,
 																		String vStatusNoGet, int vStatusCode, String pIdentificadorCliente, String userId) throws SQLException {
 
 		if (vEstoque >= 0) {
-			operacoesNoBanco.atualizaDadosEEstoqNaECOMSKU(pConexaoSQLServer, vEstoque, vEstaAtivoNoGET, vEFullNoGET, vValorFrete, vCustoAdicional,
-																										vValorComissao, vSku, vEhVariacao, vStatusNoGet, vStatusCode, pIdentificadorCliente, userId);
+			operacoesNoBanco.atualizaDadosEEstoqNaECOMSKU(pConexaoSQLServer, vEstoque, vEstaAtivoNoGET, vEFullNoGET, /*vValorFrete,*/ vCustoAdicional,
+																										vValorComissao, vSku, vEhVariacao, vStatusNoGet, vStatusCode, pIdentificadorCliente, userId
+			);
 		} else {
-			operacoesNoBanco.atualizaDadosNaECOMSKU(pConexaoSQLServer, vEstaAtivoNoGET, vEFullNoGET, vValorFrete, vCustoAdicional, vValorComissao,
-																							vSku, vEhVariacao, vStatusNoGet, vStatusCode, pIdentificadorCliente, userId);
+			operacoesNoBanco.atualizaDadosNaECOMSKU(pConexaoSQLServer, vEstaAtivoNoGET, vEFullNoGET, /*vValorFrete,*/ vCustoAdicional, vValorComissao,
+																							vSku, vEhVariacao, vStatusNoGet, vStatusCode, pIdentificadorCliente, userId
+			);
 		}
 	}
 	//endregion
 
 	//region Função Para Processar Variaçoes Do Produto Não FULL.
 	public void processarVariacoesProdutoNaoFull (List<VariacaoDTO> arrVariacoes, Connection pConexaoSQLServer, String vCategoriaGET,
-																								String vEFullNoGET, double vValorFrete, double vCustoAdicional, double vValorComissao,
-																								String vInventoryIdGET, String vStatusNoGet, int vStatusCode, String pIdentificadorCliente, String userId) throws Exception {
+																								String vEFullNoGET, /*double vValorFrete, */double vCustoAdicional, double vValorComissao,
+																								String vInventoryIdGET, String vStatusNoGet, int vStatusCode, String pIdentificadorCliente, String userId, int vOrigemDaContaML) throws Exception {
 		boolean vEhVariacao = true;
 		for (VariacaoDTO vVariacao : arrVariacoes) {
 			String vIdVariacao      = vVariacao.getId();
 			int 	 vEstoqueVariacao = vVariacao.getAvailableQuantity();
 			String vVariacaoAtiva   = vVariacao.getAvailableQuantity() > 0 ? "S" : "N";
 
-			//region Atualiza Dados e Estoque Na ECOM_SKU.
-			try {
-				if (!vCategoriaGET.isEmpty()) {
-					atualizaDadosECOM_SKU(pConexaoSQLServer, vEstoqueVariacao, vVariacaoAtiva, vEFullNoGET, vValorFrete, vCustoAdicional,
-																vValorComissao, vIdVariacao, vEhVariacao, vStatusNoGet, vStatusCode, pIdentificadorCliente, userId);
-				}
+			//region Se a Variação Existe Na Tabela ECOM_SKU do Seller
+			InfoItemsMLDTO objItensVariacaoEcomSku = operacoesNoBanco.buscaProdutovARIACAONaECOM_SKU(pConexaoSQLServer, vIdVariacao, vOrigemDaContaML);
+			if (objItensVariacaoEcomSku != null) {
+				//region Atualiza Dados e Estoque Na ECOM_SKU.
+				try {
+					if (!vCategoriaGET.isEmpty()) {
+						atualizaDadosECOM_SKU(pConexaoSQLServer, vEstoqueVariacao, vVariacaoAtiva, vEFullNoGET, /*vValorFrete,*/ vCustoAdicional,
+																	vValorComissao, vIdVariacao, vEhVariacao, vStatusNoGet, vStatusCode, pIdentificadorCliente, userId
+						);
+					}
 
-			} catch (SQLException excecao) {
-				loggerRobot.severe("Erro Ao Processar Variações Do Produto Não FULL: " + excecao.getMessage());
+				} catch (SQLException excecao) {
+					loggerRobot.severe("Erro Ao Processar Variações Do Produto Não FULL: " + excecao.getMessage());
+				}
+				//endregion
+
 			}
 			//endregion
 
@@ -90,28 +99,37 @@ public class ProcessarProdutos {
 
 	// region Função Para Processar Produto Simples FULL.
 	public void processarProdutoSimplesFull (Connection pConexaoSQLServer, int vOrigemDaContaML, String vSkuDaNotificacao, String vUrlDaImagemGET, int vEstoque,
-																					 int vCodID,  String vCategoriaGET, String vEFullNoGET, double vPrecoNoGET, double vValorFrete, double vCustoAdicional,
+																					 int vCodID,  String vCategoriaGET, String vEFullNoGET, double vPrecoNoGET, /*double vValorFrete,*/ double vCustoAdicional,
 																					 double vValorComissao, String vInventoryIdGET, String vTituloGET, String vEstaAtivoNoGET, String vCatalogoGET,
 																					 String vRelacionadoGET, String vStatusNoGet, int vStatusCode, String pIdentificadorCliente, String userId) throws Exception {
 
 		boolean vEhVariacao = false;
 		try {
+			InfoItemsMLDTO objItemProdutoEcomSku = operacoesNoBanco.buscaProdutoNaECOM_SKU(pConexaoSQLServer, vSkuDaNotificacao, vOrigemDaContaML);
+
+			if (objItemProdutoEcomSku != null) {
+				//region Atualiza Dados e EstoqueNa ECOM_SKU.
+				if (!vCategoriaGET.isEmpty()) {
+					atualizaDadosECOM_SKU(pConexaoSQLServer, vEstoque, vEstaAtivoNoGET, vEFullNoGET, /*vValorFrete,*/ vCustoAdicional, vValorComissao,
+																vSkuDaNotificacao, vEhVariacao, vStatusNoGet, vStatusCode, pIdentificadorCliente, userId
+					);
+				}
+				//endregion
+			}
+
 			//SKU Existe Na ML_SKU_FULL ?
 			DadosMlSkuFullDTO vExiste = operacoesNoBanco.existeNaTabelaMlSkuFull(pConexaoSQLServer, vSkuDaNotificacao);
 
-			//region Atualiza Dados e EstoqueNa ECOM_SKU.
-			if (!vCategoriaGET.isEmpty()) {
-				atualizaDadosECOM_SKU(pConexaoSQLServer, vEstoque, vEstaAtivoNoGET, vEFullNoGET, vValorFrete, vCustoAdicional, vValorComissao,
-															vSkuDaNotificacao, vEhVariacao, vStatusNoGet, vStatusCode, pIdentificadorCliente, userId);
-			}
-			//endregion
-
 			if (vExiste.getVExiste() <= 0) {
 				operacoesNoBanco.inserirProdutoNaTabelaMlSkuFull(pConexaoSQLServer, vOrigemDaContaML, vCodID, vSkuDaNotificacao, "0", "0", vInventoryIdGET, vTituloGET, vEstaAtivoNoGET,
-																												 vPrecoNoGET, vUrlDaImagemGET, vCatalogoGET, vRelacionadoGET);
+																												 vPrecoNoGET, vUrlDaImagemGET, vCatalogoGET, vRelacionadoGET
+				);
+
 			} else {
 				operacoesNoBanco.atualizaProdutoNaTabelaMlSkuFull(pConexaoSQLServer, vInventoryIdGET, vEstaAtivoNoGET, vPrecoNoGET, vUrlDaImagemGET, vCatalogoGET,
-																													vRelacionadoGET, vSkuDaNotificacao, pIdentificadorCliente, userId);
+																													vRelacionadoGET, vSkuDaNotificacao, pIdentificadorCliente, userId
+				);
+
 			}
 
 		} catch (SQLException excecao) {
@@ -125,7 +143,7 @@ public class ProcessarProdutos {
 
 	// region Função Para Processar Variaçoes Do Produto FULL.
 	public void processaVariacoesProdutoFull(List<VariacaoDTO> arrVariacoes, Connection pConexaoSQLServer, int vOrigemDaContaML, String vSkuDaNotificacao,
-																					 String vCategoriaGET, String vEFullNoGET, double vValorFrete, double vCustoAdicional, double vValorComissao,
+																					 String vCategoriaGET, String vEFullNoGET, /*double vValorFrete,*/ double vCustoAdicional, double vValorComissao,
 																					 String vInventoryIdGET, String vTituloGET, String vEstaAtivoNoGET, String vCatalogoGET,
 																					 String vRelacionadoGET, String vStatusNoGet, int vStatusCode, String pIdentificadorCliente, String userId) throws Exception {
 		boolean vEhVariacao = true;
@@ -136,36 +154,42 @@ public class ProcessarProdutos {
 			String vVariacaoAtiva          = vVariacao.getAvailableQuantity() > 0 ? "S" : "N";
 			String vUrlImagemVariacao      = "https://http2.mlstatic.com/D_" + vVariacao.getPictureIds().get(0) + "-N.jpg";
 			List<AtributoDTO> arrAtributos = vVariacao.getAttributes();
-			String vSellerSKUVariacao      = capturaSellerSku(arrAtributos);
+//			String vSellerSKUVariacao      = capturaSellerSku(arrAtributos);
 
 			//region Buscando CODID Na Tabela ECOM_SKU do Seller
 			InfoItemsMLDTO objItensVariacaoEcomSku = operacoesNoBanco.buscaProdutovARIACAONaECOM_SKU(pConexaoSQLServer, vIdVariacao, vOrigemDaContaML);
-			int vCodID = Math.max(objItensVariacaoEcomSku.getCodid(), 0);
+			int vCodID = 0;
+			//region Atualiza Dados e EstoqueNa ECOM_SKU.
+			if (objItensVariacaoEcomSku != null) {
+				vCodID = objItensVariacaoEcomSku.getCodid();
+				if (! vCategoriaGET.isEmpty()) {
+					atualizaDadosECOM_SKU(pConexaoSQLServer, vEstoqueVariacao, vVariacaoAtiva, vEFullNoGET, /*vValorFrete,*/ vCustoAdicional, vValorComissao,
+																vIdVariacao, vEhVariacao, vStatusNoGet, vStatusCode, pIdentificadorCliente, userId
+				  );
+				}
+			}
+			//endregion
+
 			//endregion
 
 			//region Atualiza Dados e Estoque Na ECOM_SKU.
 			try {
 
 				//SKU Existe Na ML_SKU_FULL ?
-				DadosMlSkuFullDTO vExiste = operacoesNoBanco.existeNaTabelaMlSkuFull(pConexaoSQLServer, vSkuDaNotificacao);
-
-				//region Atualiza Dados e EstoqueNa ECOM_SKU.
-				if (!vCategoriaGET.isEmpty()) {
-					atualizaDadosECOM_SKU(pConexaoSQLServer, vEstoqueVariacao, vVariacaoAtiva, vEFullNoGET, vValorFrete, vCustoAdicional, vValorComissao,
-																vSellerSKUVariacao, vEhVariacao, vStatusNoGet, vStatusCode, pIdentificadorCliente, userId);
-				}
-				//endregion
+				DadosMlSkuFullDTO vExiste = operacoesNoBanco.variacaoExisteNaTabelaMlSkuFull(pConexaoSQLServer, vSkuDaNotificacao, vIdVariacao);
 
 				if (vExiste.getVExiste() <= 0) {
 					operacoesNoBanco.inserirProdutoNaTabelaMlSkuFull(pConexaoSQLServer, vOrigemDaContaML, vCodID, vSkuDaNotificacao, "0", "0", vInventoryIdGET,
-																													 vTituloGET, vEstaAtivoNoGET, vPrecoVariacao, vUrlImagemVariacao, vCatalogoGET, vRelacionadoGET);
+																													 vTituloGET, vEstaAtivoNoGET, vPrecoVariacao, vUrlImagemVariacao, vCatalogoGET, vRelacionadoGET
+					);
 				} else {
 					operacoesNoBanco.atualizaProdutoNaTabelaMlSkuFull(pConexaoSQLServer, vInventoryIdGET, vEstaAtivoNoGET, vPrecoVariacao, vUrlImagemVariacao, vCatalogoGET,
-																														vRelacionadoGET, vSkuDaNotificacao, pIdentificadorCliente, userId);
+																														vRelacionadoGET, vSkuDaNotificacao, pIdentificadorCliente, userId
+					);
 				}
 
 			} catch (SQLException excecao) {
-				loggerRobot.severe("Erro Ao Processar Variações Do Produto FULL: " + excecao.getMessage());
+				loggerRobot.severe("Erro Ao Processar Variacoes Do Produto FULL: " + excecao.getMessage());
 			}
 			//endregion
 

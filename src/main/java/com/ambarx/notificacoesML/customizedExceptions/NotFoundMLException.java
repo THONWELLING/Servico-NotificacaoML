@@ -1,11 +1,11 @@
 package com.ambarx.notificacoesML.customizedExceptions;
 
 
-public class LimiteRequisicaoMLException extends Exception {
+public class NotFoundMLException extends Exception {
 	private final String vApi;
 	private final String vIdentificadorCliente;
 
-	public LimiteRequisicaoMLException(String message, String vApi, String vIdentificadorCliente) {
+	public NotFoundMLException(String message, String vApi, String vIdentificadorCliente) {
 		super(message);
 		this.vApi = vApi;
 		this.vIdentificadorCliente = vIdentificadorCliente;
@@ -18,5 +18,4 @@ public class LimiteRequisicaoMLException extends Exception {
 	public String getvIdentificadorCliente() {
 		return vIdentificadorCliente;
 	}
-
 }

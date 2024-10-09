@@ -31,16 +31,6 @@ public class OperacoesNoBanco {
   @Autowired
   private FuncoesUtils utils;
 
-	//region Função Para Deletar Uma Notificação Por ID.
-	public void deletaNotificacaoPorID(Long pIDNotificacaoAtual) {
-    try {
-      itensRepository.deleteById(pIDNotificacaoAtual);
-      logger.log(Level.INFO, "SUCESSO: Notificação com o ID " + pIDNotificacaoAtual + " Foi Deletada.");
-    } catch(EmptyResultDataAccessException excecao) {
-      logger.log(Level.WARNING, "ATENÇÃO: Notificação com o ID " + pIDNotificacaoAtual + ", Não Existe Ou Já Foi Deletada. Continuando Execução.", excecao.getMessage());
-    }
-  }
-	//endregion
 
 	//region Função Deleta Todas As Notificações Do Seller Atual.
 	public void deletaNotificacoesDoSeller(List<NotificacaoMLDTO> pArrNotificacoesUsuarioAtual) {
@@ -61,7 +51,6 @@ public class OperacoesNoBanco {
       if (resultSet.next()) {
         String vValorParametro = !resultSet.getString("VALOR").isEmpty() ? resultSet.getString("VALOR").trim() : resultSet.getString("VALOR");
         if (vValorParametro == null || vValorParametro.isEmpty() || vValorParametro.equalsIgnoreCase("N")) {
-          logger.info("Parâmetro IGNORARGETSKU Está Vazio Ou Null. Considerar N.");
           vValorParametro = "N";
           return false;
         }
@@ -69,7 +58,6 @@ public class OperacoesNoBanco {
       }
     } catch (SQLException excecao){
       loggerRobot.severe("FALHA: Erro Ao Buscar Parâmetro IGNORARGETSKU: -> " + excecao.getMessage());
-      logger.severe("FALHA: Erro Ao Buscar Parâmetro IGNORARGETSKU: -> " + excecao.getMessage());
       throw excecao;
     }
     return false;
@@ -203,41 +191,24 @@ public class OperacoesNoBanco {
 	}
   //endregion
 
-  //region Função Para Atualizar Dados De Um Produto Na Tabela ECOM_SKU.
-  public void atualizaProdutoNaTabelaECOM_SKU(Connection pConexao, String pSkuVariacao, String pSkuNotificacao) throws SQLException {
-
-    String Qry_AtualizaECOM_Sku = "UPDATE ECOM_SKU SET SKUVARIACAO_MASTER = ? WHERE SKU = ?";
-
-    try (PreparedStatement statement = pConexao.prepareStatement(Qry_AtualizaECOM_Sku)) {
-      statement.setString(1, pSkuVariacao);
-      statement.setString(2, pSkuNotificacao);
-
-      int linhasAfetadas = statement.executeUpdate();
-      if (linhasAfetadas == 0) {
-        logger.warning("Nenhum Dado Foi Atualizado Na Tabela ECOM_SKU. Verificar Os Valores Fornecidos.");
-      }
-
-    } catch (SQLException excecao) {
-      loggerRobot.severe("FALHA: Erro Ao Atualizar Dados Na Tabela ECOM_SKU: -> " + excecao.getMessage());
-      throw excecao;
-    }
-  }
-  //endregion
-
   //region Função Para Atualizar Dados e ESTOQUE De Um Produto Na Tabela ECOM_SKU.
-  public void atualizaDadosEEstoqNaECOMSKU(Connection pConexao, int pEstoque, String pAtivo, String pFulfillment, double pFrete, double pCustoAdicional, double pComissao,
-                                           String pSku, boolean vEhVariacao, String vStatusNoGet, int vStatusCode, String pIdentificadorCliente, String userId) throws SQLException {
+  public void atualizaDadosEEstoqNaECOMSKU(Connection pConexao, int pEstoque, String pAtivo, String pFulfillment, /*double pFrete,*/ double pCustoAdicional, double pComissao,
+                                           String vIdVariacao, boolean vEhVariacao, String vStatusNoGet, int vStatusCode, String pIdentificadorCliente, String userId) throws SQLException {
 
     Date vDataHr = new Date(System.currentTimeMillis());
+    /*String Qry_AtualizaECOMSku = vEhVariacao
+        ? "UPDATE ECOM_SKU SET ESTOQUE = ?, ATIVO = ?, FULFILLMENT = ?, CUSTO_FRETE = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, DT_GET = ?, STCODE = ?, RETORNO = ? WHERE SKUVARIACAO_MASTER = ?"
+        : "UPDATE ECOM_SKU SET ESTOQUE = ?, ATIVO = ?, FULFILLMENT = ?, CUSTO_FRETE = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, DT_GET = ?, STCODE = ?, RETORNO = ? WHERE SKU = ?";
+    */
     String Qry_AtualizaECOMSku = vEhVariacao
-      ? "UPDATE ECOM_SKU SET ESTOQUE = ?, ATIVO = ?, FULFILLMENT = ?, CUSTO_FRETE = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, DT_GET = ?, STCODE = ?, RETORNO = ? WHERE SKUVARIACAO_MASTER = ?"
-      : "UPDATE ECOM_SKU SET ESTOQUE = ?, ATIVO = ?, FULFILLMENT = ?, CUSTO_FRETE = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, DT_GET = ?, STCODE = ?, RETORNO = ? WHERE SKU = ?";
+        ? "UPDATE ECOM_SKU SET ESTOQUE = ?, ATIVO = ?, FULFILLMENT = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, DT_GET = ?, STCODE = ?, RETORNO = ? WHERE SKUVARIACAO_MASTER = ?"
+        : "UPDATE ECOM_SKU SET ESTOQUE = ?, ATIVO = ?, FULFILLMENT = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, DT_GET = ?, STCODE = ?, RETORNO = ? WHERE SKU = ?";
 
     String Qry_preenchida = vEhVariacao
-      ? "UPDATE ECOM_SKU SET ESTOQUE ='"+pEstoque+"', ATIVO ='"+pAtivo+"', FULFILLMENT ='"+pFulfillment+"', CUSTO_FRETE ='"+pFrete+"', CUSTO_ADICIONAL ='"+pCustoAdicional+"', COMISSAO_SKU ='"+pComissao+
-        "', DT_GET ='"+vDataHr+"', STCODE ='"+vStatusCode+"', RETORNO ='"+vStatusNoGet+"' WHERE SKUVARIACAO_MASTER ='"+pSku+"')"
-      : "UPDATE ECOM_SKU SET ESTOQUE ='"+pEstoque+"', ATIVO ='"+pAtivo+"', FULFILLMENT ='"+pFulfillment+"', CUSTO_FRETE ='"+pFrete+"', CUSTO_ADICIONAL ='"+pCustoAdicional+"', COMISSAO_SKU ='"+pComissao+
-        "', DT_GET ='"+vDataHr+"', STCODE ='"+vStatusCode+"', RETORNO ='"+vStatusNoGet+"' WHERE SKU ='"+pSku+"')";
+      ? "UPDATE ECOM_SKU SET ESTOQUE ='"+pEstoque+"', ATIVO ='"+pAtivo+"', FULFILLMENT ='"+pFulfillment+"', CUSTO_ADICIONAL ='"+pCustoAdicional+"', COMISSAO_SKU ='"+pComissao+
+        "', DT_GET ='"+vDataHr+"', STCODE ='"+vStatusCode+"', RETORNO ='"+vStatusNoGet+"' WHERE SKUVARIACAO_MASTER ='"+vIdVariacao+"'"
+      : "UPDATE ECOM_SKU SET ESTOQUE ='"+pEstoque+"', ATIVO ='"+pAtivo+"', FULFILLMENT ='"+pFulfillment+"', CUSTO_ADICIONAL ='"+pCustoAdicional+"', COMISSAO_SKU ='"+pComissao+
+        "', DT_GET ='"+vDataHr+"', STCODE ='"+vStatusCode+"', RETORNO ='"+vStatusNoGet+"' WHERE SKU ='"+vIdVariacao+"'";
 
     try (PreparedStatement statement = pConexao.prepareStatement(Qry_AtualizaECOMSku)) {
 
@@ -245,19 +216,18 @@ public class OperacoesNoBanco {
 			statement.setInt(    1, pEstoque);
       statement.setString( 2, pAtivo);
       statement.setString( 3, pFulfillment);
-      statement.setDouble( 4, pFrete);
-      statement.setDouble( 5, pCustoAdicional);
-      statement.setDouble( 6, pComissao);
-      statement.setDate(   7, vDataHr);
-      statement.setInt(    8, vStatusCode);
-      statement.setString( 9, vStatusNoGet);
-      statement.setString(10, pSku);
+      statement.setDouble( 4, pCustoAdicional);
+      statement.setDouble( 5, pComissao);
+      statement.setDate(   6, vDataHr);
+      statement.setInt(    7, vStatusCode);
+      statement.setString( 8, vStatusNoGet);
+      statement.setString( 9, vIdVariacao);
+      //statement.setDouble( 4, pFrete); //Frete na Consulta correta é o 4º
 			//endregion
 
       int linhasAfetadas = statement.executeUpdate();
       if (linhasAfetadas == 0) {
-        loggerRobot.info("Nenhum Dado Foi Atualizado Na Tabela ECOM_SKU Identificador -> " + pIdentificadorCliente + " UserId: " + userId +". Verificar Os Valores Fornecidos.");
-        loggerRobot.warning("QUERY: -> " + Qry_preenchida);
+        loggerRobot.info("Nenhum Dado Foi Atualizado Na Tabela ECOM_SKU Identificador -> " + pIdentificadorCliente + " UserId: " + userId +" .QUERY: -> " + Qry_preenchida);
       }
 
     } catch (SQLException excecao) {
@@ -268,19 +238,25 @@ public class OperacoesNoBanco {
   //endregion
 
   //region Função Para Atualizar Dados Sem ESTOQUE De Um Produto Na Tabela ECOM_SKU.
-  public void atualizaDadosNaECOMSKU(Connection pConexao, String pAtivo, String pFulfillment, double pFrete, double pCustoAdicional, double pComissao, String pSku,
+  public void atualizaDadosNaECOMSKU(Connection pConexao, String pAtivo, String pFulfillment, /*double pFrete,*/ double pCustoAdicional, double pComissao, String pSku,
                                      boolean vEhVariacao, String vStatusNoGet, int vStatusCode, String pIdentificadorCliente, String userId) throws SQLException {
 
     Date vDataHr = new Date(System.currentTimeMillis());
 
+/*
     String Qry_AtualizaECOMSku = vEhVariacao
         ? "UPDATE ECOM_SKU SET ATIVO = ?, FULFILLMENT = ?, CUSTO_FRETE = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, DT_GET = ?, STCODE = ?, RETORNO = ? WHERE SKUVARIACAO_MASTER = ?"
         : "UPDATE ECOM_SKU SET ATIVO = ?, FULFILLMENT = ?, CUSTO_FRETE = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, DT_GET = ?, STCODE = ?, RETORNO = ? WHERE SKU = ?";
+*/
+
+    String Qry_AtualizaECOMSku = vEhVariacao
+        ? "UPDATE ECOM_SKU SET ATIVO = ?, FULFILLMENT = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, DT_GET = ?, STCODE = ?, RETORNO = ? WHERE SKUVARIACAO_MASTER = ?"
+        : "UPDATE ECOM_SKU SET ATIVO = ?, FULFILLMENT = ?, CUSTO_ADICIONAL = ?, COMISSAO_SKU = ?, DT_GET = ?, STCODE = ?, RETORNO = ? WHERE SKU = ?";
 
     String Qry_preenchida = vEhVariacao
-        ? "UPDATE ECOM_SKU SET ATIVO ='"+pAtivo+"', FULFILLMENT ='"+pFulfillment+"', CUSTO_FRETE ='"+pFrete+"', CUSTO_ADICIONAL ='"+pCustoAdicional+"', COMISSAO_SKU ='"+pComissao+
+        ? "UPDATE ECOM_SKU SET ATIVO ='"+pAtivo+"', FULFILLMENT ='"+pFulfillment+"', CUSTO_ADICIONAL ='"+pCustoAdicional+"', COMISSAO_SKU ='"+pComissao+
         "', DT_GET ='"+vDataHr+"', STCODE ='"+vStatusCode+"', RETORNO ='"+vStatusNoGet+"', WHERE SKUVARIACAO_MASTER ='"+pSku+"')"
-        : "UPDATE ECOM_SKU SET ATIVO ='"+pAtivo+"', FULFILLMENT ='"+pFulfillment+"', CUSTO_FRETE ='"+pFrete+"', CUSTO_ADICIONAL ='"+pCustoAdicional+"', COMISSAO_SKU ='"+pComissao+
+        : "UPDATE ECOM_SKU SET ATIVO ='"+pAtivo+"', FULFILLMENT ='"+pFulfillment+"', CUSTO_ADICIONAL ='"+pCustoAdicional+"', COMISSAO_SKU ='"+pComissao+
         "', DT_GET ='"+vDataHr+"', STCODE ='"+vStatusCode+"', RETORNO ='"+vStatusNoGet+"', WHERE SKU ='"+pSku+"')";
 
     try (PreparedStatement statement = pConexao.prepareStatement(Qry_AtualizaECOMSku)) {
@@ -288,21 +264,18 @@ public class OperacoesNoBanco {
 			//region Preenchendo Parâmetros Da Query.
       statement.setString( 1, pAtivo);
       statement.setString( 2, pFulfillment);
-      statement.setDouble( 3, pFrete);
-      statement.setDouble( 4, pCustoAdicional);
-      statement.setDouble( 5, pComissao);
-      statement.setDate(   6, vDataHr);
-      statement.setInt(    7, vStatusCode);
-      statement.setString( 8, vStatusNoGet);
-      statement.setString( 9, pSku);
+      statement.setDouble( 3, pCustoAdicional);
+      statement.setDouble( 4, pComissao);
+      statement.setDate(   5, vDataHr);
+      statement.setInt(    6, vStatusCode);
+      statement.setString( 7, vStatusNoGet);
+      statement.setString( 8, pSku);
+      //statement.setDouble( 3, pFrete);// Vai na posição 3
 			//endregion
 
       int linhasAfetadas = statement.executeUpdate();
-      if (linhasAfetadas > 0) {
-        logger.info("SUCESSO: Dados Atualizados Na Tabela ECOM_SKU.");
-      } else {
-        loggerRobot.info("Nenhum Dado Foi Atualizado Na Tabela ECOM_SKU Identificador -> " + pIdentificadorCliente + " UserId: " + userId +". Verificar Os Valores Fornecidos.");
-        loggerRobot.warning("Query: -> " + Qry_preenchida);
+      if (linhasAfetadas == 0) {
+        loggerRobot.info("Nenhum Dado Foi Atualizado Na Tabela ECOM_SKU Identificador -> " + pIdentificadorCliente + " UserId: " + userId +". Query: -> " + Qry_preenchida);
       }
 
     } catch (SQLException excecao) {
@@ -334,7 +307,7 @@ public class OperacoesNoBanco {
   //endregion
 
   //region Função Para Buscar Produto VARIAÇÃO Na Tabela ML_SKU_FULL e Setar vExiste.
-  public DadosMlSkuFullDTO existeNaTabelaMlSkuFull(Connection pConexao, String pSkuML, String pVariacaoId) throws SQLException {
+  public DadosMlSkuFullDTO variacaoExisteNaTabelaMlSkuFull(Connection pConexao, String pSkuML, String pVariacaoId) throws SQLException {
     String Qry_InfoDBMlSkuFull = "SELECT COUNT(*) FROM ML_SKU_FULL WHERE SKU = ? AND VARIACAO_ID = ?";
     try (PreparedStatement statement = pConexao.prepareStatement(Qry_InfoDBMlSkuFull)) {
       statement.setString(1, pSkuML);
@@ -433,7 +406,6 @@ public class OperacoesNoBanco {
 
     } catch (SQLException excecao) {
       loggerRobot.severe("FALHA: Erro Ao Atualizar Dados Na Tabela ML_SKU_FULL: -> " + excecao.getMessage());
-      logger.severe("FALHA: Erro Ao Atualizar Dados Na Tabela ML_SKU_FULL: -> " + excecao.getMessage());
       throw excecao;
     }
   }
@@ -443,9 +415,15 @@ public class OperacoesNoBanco {
   public void inserirProdutoNaTabelaEcomSkuSemVinculo(Connection pConexao, int pOrigem, String pSkuML, String pSellerSku, String pTitulo, double pPreco, String pAnuncioUrl,
                                                       String pImagemUrl, int pCodID, int pVariacoes) throws SQLException {
 
+    Date vDataHr = new Date(System.currentTimeMillis());
     String Qry_InsertEcomSkuSemVinculo = "INSERT INTO ECOM_SKU_SEMVINCULO (DATAHR, ORIGEM_ID, SKU, SELLER_SKU, TITULO, VALOR, LINK_URL, LINK_IMAGE, CODID, VARIACOES) "
                                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    Date vDataHr = new Date(System.currentTimeMillis());
+
+
+    String Qry_preenchida = "INSERT INTO ECOM_SKU_SEMVINCULO(DATAHR, ORIGEM_ID, SKU, SELLER_SKU, TITULO, VALOR, LINK_URL, LINK_IMAGE, CODID, VARIACOES) VALUES ("
+        + "'" + vDataHr + "', " + pOrigem + ", '" + pSkuML + "', '" + pSellerSku + "', '" + pTitulo + "', '" + pPreco + "', " + pAnuncioUrl + ", '" + pImagemUrl + "', '" + pCodID + "', " + pVariacoes + ")";
+
+
     try (PreparedStatement statement = pConexao.prepareStatement(Qry_InsertEcomSkuSemVinculo)) {
 
       //region Preenche Parâmetos da Query.
@@ -464,7 +442,7 @@ public class OperacoesNoBanco {
       statement.executeUpdate();
 
     } catch (SQLException excecao) {
-      loggerRobot.severe("FALHA: Erro Ao Inserir Dados Na Tabela ECOM_SKU_SEMVINCULO: -> " + excecao.getMessage());
+      loggerRobot.severe("FALHA: Erro Ao Inserir Dados Na Tabela ECOM_SKU_SEMVINCULO: -> " + excecao.getMessage()+ "\nQry_preenchida: -> " + Qry_preenchida);
       throw excecao;
     }
   }
@@ -474,9 +452,14 @@ public class OperacoesNoBanco {
   public void inserirVariacNaTabelaEcomSkuSemVinculo(Connection pConexao, int pOrigem, String pSkuML, String pIdVariacao, String pSellerSkuVariac, String pTitulo, double pPreco, String pAnuncioUrl,
                                                        String pImagemUrl, int pCodID) throws SQLException {
 
+    Date vDataHr = new Date(System.currentTimeMillis());
     String Qry_InsertVariacEcomSkuSemVinculo = "INSERT INTO ECOM_SKU_SEMVINCULO (DATAHR, ORIGEM_ID, SKU, SKUVAR, SELLER_SKU, TITULO, VALOR, LINK_URL, LINK_IMAGE, CODID) "
                                              + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    Date vDataHr = new Date(System.currentTimeMillis());
+
+    String Qry_preenchida = "INSERT INTO ECOM_SKU_SEMVINCULO(DATAHR, ORIGEM_ID, SKU, SKUVAR, SELLER_SKU, TITULO, VALOR, LINK_URL, LINK_IMAGE, CODID) VALUES ("
+        + "'" + vDataHr + "', " + pOrigem + ", '" + pSkuML + "', '" + pIdVariacao + "', '" + pSellerSkuVariac + "', '" + pTitulo + "', " + pPreco + ", '" + pAnuncioUrl + "', '" + pImagemUrl + "', " + pCodID + ")";
+
+
     try (PreparedStatement statement = pConexao.prepareStatement(Qry_InsertVariacEcomSkuSemVinculo)) {
 
       //region Preenche Parâmetos da Query.
@@ -495,7 +478,7 @@ public class OperacoesNoBanco {
       statement.executeUpdate();
 
     } catch (SQLException excecao) {
-      loggerRobot.severe("FALHA: Erro Ao Inserir Variação Na Tabela ECOM_SKU_SEMVINCULO: -> " + excecao.getMessage());
+      loggerRobot.severe("FALHA: Erro Ao Inserir Variação Na Tabela ECOM_SKU_SEMVINCULO: -> " + excecao.getMessage() + "\nQry_preenchida: -> " + Qry_preenchida);
       throw excecao;
     }
   }
@@ -533,11 +516,10 @@ public class OperacoesNoBanco {
 
       int linhasAfetadas = statement.executeUpdate();
       if (linhasAfetadas == 0) {
-        logger.warning("Nenhum Dado Foi DELETADO Da Tabela ECOM_SKU_SEMVINCULO. Verificar Os Valores Fornecidos.");
+        logger.warning("Nenhum Dado Foi DELETADO Da Tabela ECOM_SKU_SEMVINCULO. Verificar Valores Fornecidos.");
       }
     } catch (SQLException excecao) {
       loggerRobot.severe("FALHA: Erro Ao DELETAR O SKU " + pSkuNotificacao + " Da Tabela ECOM_SKU_SEMVINCULO: -> " + excecao.getMessage());
-      logger.severe("FALHA: Erro Ao DELETAR O SKU " + pSkuNotificacao + " Da Tabela ECOM_SKU_SEMVINCULO: -> " + excecao.getMessage());
       throw excecao;
     }
   }

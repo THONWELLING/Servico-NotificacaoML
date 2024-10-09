@@ -11,7 +11,7 @@ public class LoggerConfig {
 	@Getter
 	private static final Logger loggerRobot 				 = Logger.getLogger("LoggerORobot");
 	private static String ultimaMensagemSemTimestamp = ""; // Armazena a última mensagem sem timestamp
-	private static final String CAMINHO_ARQUIVO_LOG  = "C:/Ambar/Temp/notificacaoMLLogs.log"; // C:/Ambar/Temp/MLLogsDebug.log
+	private static final String CAMINHO_ARQUIVO_LOG  = "C:/Ambar/Temp/notificacaoMLItemsLogs.log"; // C:/Ambar/Temp/MLLogsDebug.log
 
 	static {
 		try {
